@@ -21,6 +21,28 @@ import "react-loading-skeleton/dist/skeleton.css";
 
 // ... User, Message, Conversation interfaces remain the same
 
+interface User {
+  _id: string;
+  username: string;
+  img?: string;
+}
+
+interface Message {
+  _id: string;
+  senderId: User;
+  text?: string;
+  media?: string;
+  createdAt: string;
+}
+
+interface Conversation {
+  _id: string;
+  participants: User[];
+  lastMessage?: string;
+  updatedAt: string;
+}
+
+
 const MessageDetail: React.FC = () => {
   const { id } = useParams();
   const router = useRouter(); // <-- add router
