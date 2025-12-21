@@ -5,9 +5,19 @@ import { FaPlay, FaPause, FaExpand, FaTimes } from "react-icons/fa";
 
 let currentlyPlayingVideo: HTMLVideoElement | null = null;
 
+type VideoExtension =
+  | "mp4"
+  | "webm"
+  | "ogg"
+  | "mov"
+  | "avi"
+  | "mkv"
+  | "flv"
+  | "wmv";
+
 interface CustomVideoPlayerProps {
   src: string;
-  fileExtension: string;
+  fileExtension: VideoExtension;
 }
 
 const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
@@ -84,7 +94,7 @@ const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
           className="rounded-lg w-full border border-gray-600 cursor-pointer object-cover shadow-md"
           onTimeUpdate={() => handleProgress(smallVideoRef, setProgress)}
         >
-          <source src={src} type={`video/${fileExtension}`} />
+          <source src={src} type={`video/${fileExtension || "mp4"}`} />
         </video>
 
         {/* Play/Pause Overlay */}
@@ -134,7 +144,7 @@ const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
             autoPlay
             onTimeUpdate={() => handleProgress(fullVideoRef, setProgress)}
           >
-            <source src={src} type={`video/${fileExtension}`} />
+            <source src={src} type={`video/${fileExtension || "mp4"}`} />
           </video>
         </div>
       )}
