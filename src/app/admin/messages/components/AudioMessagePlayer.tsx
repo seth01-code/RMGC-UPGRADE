@@ -13,7 +13,26 @@ interface AudioMessagePlayerProps {
   isSender: boolean;
 }
 
+/**
+ * Keep track of the currently playing audio (HTMLAudioElement or WaveSurfer)
+ */
 let currentlyPlaying: HTMLAudioElement | WaveSurfer | null = null;
+
+/**
+ * Safely stop any audio type
+ */
+const stopPlayback = (
+  player: HTMLAudioElement | WaveSurfer | null
+) => {
+  if (!player) return;
+
+  if (player instanceof WaveSurfer) {
+    player.stop();
+  } else {
+    player.pause();
+    player.currentTime = 0;
+  }
+};
 
 const AudioMessagePlayer: React.FC<AudioMessagePlayerProps> = ({
   src,
@@ -35,7 +54,9 @@ const AudioMessagePlayer: React.FC<AudioMessagePlayerProps> = ({
   const waveformRef = useRef<HTMLDivElement>(null);
   const waveSurferRef = useRef<WaveSurfer | null>(null);
 
-  // Initialize WaveSurfer for WAV files
+  /**
+   * WAV → WaveSurfer
+   */
   useEffect(() => {
     if (fileExtension !== "wav") return;
 
@@ -57,14 +78,16 @@ const AudioMessagePlayer: React.FC<AudioMessagePlayerProps> = ({
       });
 
       waveSurferRef.current.on("audioprocess", () => {
-        setCurrentTime(formatTime(waveSurferRef.current!.getCurrentTime()));
+        setCurrentTime(
+          formatTime(waveSurferRef.current!.getCurrentTime())
+        );
       });
 
       waveSurferRef.current.on("finish", () => {
         setIsPlaying(false);
         currentlyPlaying = null;
       });
-    } catch (err) {
+    } catch {
       setError(true);
     }
 
@@ -74,60 +97,69 @@ const AudioMessagePlayer: React.FC<AudioMessagePlayerProps> = ({
     };
   }, [src, fileExtension]);
 
-  // Standard audio handling
+  /**
+   * Non-WAV → native audio
+   */
   useEffect(() => {
     if (fileExtension === "wav") return;
     const audio = audioRef.current;
     if (!audio) return;
 
-    const handleLoadedMetadata = () => {
-      if (!isNaN(audio.duration)) setDuration(formatTime(audio.duration));
-      setLoaded(true);
+    const onLoaded = () => {
+      if (!isNaN(audio.duration)) {
+        setDuration(formatTime(audio.duration));
+        setLoaded(true);
+      }
     };
 
-    const handleTimeUpdate = () => {
+    const onTimeUpdate = () => {
       if (!isNaN(audio.duration)) {
         setProgress((audio.currentTime / audio.duration) * 100);
         setCurrentTime(formatTime(audio.currentTime));
       }
     };
 
-    const handlePlay = () => {
+    const onPlay = () => {
       if (currentlyPlaying && currentlyPlaying !== audio) {
-        currentlyPlaying.pause?.();
-        currentlyPlaying.stop?.(); // <-- fixed
+        stopPlayback(currentlyPlaying);
       }
       currentlyPlaying = audio;
       setIsPlaying(true);
     };
 
-    const handlePause = () => {
-      currentlyPlaying = null;
+    const onPause = () => {
       setIsPlaying(false);
+      currentlyPlaying = null;
     };
 
-    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
-    audio.addEventListener("timeupdate", handleTimeUpdate);
-    audio.addEventListener("play", handlePlay);
-    audio.addEventListener("pause", handlePause);
+    audio.addEventListener("loadedmetadata", onLoaded);
+    audio.addEventListener("timeupdate", onTimeUpdate);
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
     audio.addEventListener("error", () => setError(true));
 
     return () => {
-      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
-      audio.removeEventListener("timeupdate", handleTimeUpdate);
-      audio.removeEventListener("play", handlePlay);
-      audio.removeEventListener("pause", handlePause);
+      audio.removeEventListener("loadedmetadata", onLoaded);
+      audio.removeEventListener("timeupdate", onTimeUpdate);
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
     };
   }, [fileExtension]);
 
+  /**
+   * Play / Pause handler
+   */
   const togglePlay = () => {
+    const activePlayer =
+      fileExtension === "wav"
+        ? waveSurferRef.current
+        : audioRef.current;
+
     if (
       currentlyPlaying &&
-      currentlyPlaying !==
-        (fileExtension === "wav" ? waveSurferRef.current : audioRef.current)
+      currentlyPlaying !== activePlayer
     ) {
-      currentlyPlaying.pause?.();
-      currentlyPlaying.stop?.(); // <-- fixed
+      stopPlayback(currentlyPlaying);
     }
 
     if (fileExtension === "wav") {
@@ -144,8 +176,9 @@ const AudioMessagePlayer: React.FC<AudioMessagePlayerProps> = ({
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (isPlaying) audio.pause();
-    else {
+    if (isPlaying) {
+      audio.pause();
+    } else {
       audio.play().catch(() => setError(true));
       currentlyPlaying = audio;
     }
@@ -201,23 +234,23 @@ const AudioMessagePlayer: React.FC<AudioMessagePlayerProps> = ({
               )}
             </button>
 
-            <span className="text-white text-sm md:text-base">
+            <span className="text-white text-sm">
               {currentTime}
             </span>
 
             {fileExtension === "wav" ? (
-              <div ref={waveformRef} className="flex-1"></div>
+              <div ref={waveformRef} className="flex-1" />
             ) : (
-              <div className="relative flex-1 h-1 bg-gray-600 rounded-full overflow-hidden cursor-pointer">
+              <div className="flex-1 h-1 bg-gray-600 rounded overflow-hidden">
                 <div
-                  className="h-full bg-green-500 transition-all duration-200"
+                  className="h-full bg-green-500"
                   style={{ width: `${progress}%` }}
-                ></div>
+                />
               </div>
             )}
 
             {fileExtension !== "wav" && (
-              <span className="text-white text-sm md:text-base">
+              <span className="text-white text-sm">
                 {duration}
               </span>
             )}
@@ -225,7 +258,7 @@ const AudioMessagePlayer: React.FC<AudioMessagePlayerProps> = ({
             {!downloaded && (
               <button
                 onClick={handleDownload}
-                className="text-white underline text-sm md:text-base"
+                className="text-white underline text-sm"
               >
                 Download
               </button>
