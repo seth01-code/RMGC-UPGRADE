@@ -271,7 +271,7 @@ const Add: React.FC = () => {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setSingleFile(e.target.files?.[0] || null)}
+                  onChange={(e) => setSingleFile(e.target.files?.[0])}
                   className="hidden"
                 />
               </label>
@@ -288,7 +288,7 @@ const Add: React.FC = () => {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setSingleFile(null)}
+                    onClick={() => setSingleFile(undefined)}
                     className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition shadow"
                   >
                     ✖
