@@ -13,11 +13,7 @@ interface AudioMessagePlayerProps {
   isSender: boolean;
 }
 
-let currentlyPlaying:
-  | HTMLAudioElement
-  | WaveSurfer
-  | null = null;
-
+let currentlyPlaying: HTMLAudioElement | WaveSurfer | null = null;
 
 const AudioMessagePlayer: React.FC<AudioMessagePlayerProps> = ({
   src,
@@ -50,7 +46,6 @@ const AudioMessagePlayer: React.FC<AudioMessagePlayerProps> = ({
         progressColor: "#22C55E",
         cursorColor: "#FFFFFF",
         barWidth: 2,
-        responsive: true,
         height: 45,
       });
 
