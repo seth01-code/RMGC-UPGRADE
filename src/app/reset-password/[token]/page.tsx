@@ -43,7 +43,7 @@ const ResetPasswordPage: React.FC = () => {
 
       toast.success(res.data?.message || "Password reset successful!");
       setTimeout(() => router.push("/login"), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast.error(err.response?.data?.error || "Something went wrong!");
     } finally {
       setLoading(false);

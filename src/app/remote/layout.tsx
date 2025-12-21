@@ -12,7 +12,7 @@ export default function WorkerLayout({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-   const [user, setUser] = useState<any>(null);
+   const [user, setUser] = useState<unknown>(null);
 
  useEffect(() => {
   const storedUser = localStorage.getItem("currentUser");

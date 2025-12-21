@@ -36,7 +36,7 @@ const Reviews: React.FC<ReviewsProps> = ({ gigId }) => {
 
   const [desc, setDesc] = useState("");
   const [star, setStar] = useState<number>(5);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
