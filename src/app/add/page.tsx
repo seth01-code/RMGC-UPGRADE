@@ -11,13 +11,14 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import newRequest from "../utils/newRequest";
 import upload from "../utils/upload";
-import { gigReducer, INITIAL_STATE } from "../reducers/gigReducer";
+import { gigReducer, INITIAL_STATE, GigState } from "../reducers/gigReducer";
 import { useExchangeRate } from "../hooks/useExchangeRate";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Image from "next/image";
 
 const Add: React.FC = () => {
+  type GigField = keyof GigState;
   const router = useRouter();
   const queryClient = useQueryClient();
   const [state, dispatch] = useReducer(gigReducer, INITIAL_STATE);
@@ -101,12 +102,13 @@ const Add: React.FC = () => {
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const { name, value } = e.target;
+    const name = e.target.name as GigField;
+    const value = e.target.value;
 
     dispatch({
       type: "CHANGE_INPUT",
       payload: {
-        name: name as keyof GigState,
+        name,
         value,
       },
     });
