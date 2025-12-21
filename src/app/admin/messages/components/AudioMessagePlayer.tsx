@@ -21,9 +21,7 @@ let currentlyPlaying: HTMLAudioElement | WaveSurfer | null = null;
 /**
  * Safely stop any audio type
  */
-const stopPlayback = (
-  player: HTMLAudioElement | WaveSurfer | null
-) => {
+const stopPlayback = (player: HTMLAudioElement | WaveSurfer | null) => {
   if (!player) return;
 
   if (player instanceof WaveSurfer) {
@@ -78,9 +76,7 @@ const AudioMessagePlayer: React.FC<AudioMessagePlayerProps> = ({
       });
 
       waveSurferRef.current.on("audioprocess", () => {
-        setCurrentTime(
-          formatTime(waveSurferRef.current!.getCurrentTime())
-        );
+        setCurrentTime(formatTime(waveSurferRef.current!.getCurrentTime()));
       });
 
       waveSurferRef.current.on("finish", () => {
@@ -151,14 +147,9 @@ const AudioMessagePlayer: React.FC<AudioMessagePlayerProps> = ({
    */
   const togglePlay = () => {
     const activePlayer =
-      fileExtension === "wav"
-        ? waveSurferRef.current
-        : audioRef.current;
+      fileExtension === "wav" ? waveSurferRef.current : audioRef.current;
 
-    if (
-      currentlyPlaying &&
-      currentlyPlaying !== activePlayer
-    ) {
+    if (currentlyPlaying && currentlyPlaying !== activePlayer) {
       stopPlayback(currentlyPlaying);
     }
 
@@ -214,12 +205,9 @@ const AudioMessagePlayer: React.FC<AudioMessagePlayerProps> = ({
       {!error && loaded && (
         <>
           {fileExtension !== "wav" && (
-            <audio
-              ref={audioRef}
-              src={src}
-              type={`audio/${fileExtension}`}
-              className="hidden"
-            />
+            <audio ref={audioRef} className="hidden">
+              <source src={src} type={`audio/${fileExtension}`} />
+            </audio>
           )}
 
           <div className="flex items-center gap-3">
@@ -234,9 +222,7 @@ const AudioMessagePlayer: React.FC<AudioMessagePlayerProps> = ({
               )}
             </button>
 
-            <span className="text-white text-sm">
-              {currentTime}
-            </span>
+            <span className="text-white text-sm">{currentTime}</span>
 
             {fileExtension === "wav" ? (
               <div ref={waveformRef} className="flex-1" />
@@ -250,9 +236,7 @@ const AudioMessagePlayer: React.FC<AudioMessagePlayerProps> = ({
             )}
 
             {fileExtension !== "wav" && (
-              <span className="text-white text-sm">
-                {duration}
-              </span>
+              <span className="text-white text-sm">{duration}</span>
             )}
 
             {!downloaded && (
