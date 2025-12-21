@@ -105,7 +105,7 @@ const MessageDetail: React.FC = () => {
 
   const getFileIcon = (filename: string) => {
     const extension = filename.split(".").pop()?.toLowerCase() ?? "";
-    const icons: Record<string, JSX.Element> = {
+    const icons: Record<string, React.ReactNode> = {
       pdf: <FaFilePdf className="text-red-700 text-xl" />,
       doc: <FaFileWord className="text-blue-900 text-xl" />,
       docx: <FaFileWord className="text-blue-900 text-xl" />,
