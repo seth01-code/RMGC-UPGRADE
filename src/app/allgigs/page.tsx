@@ -29,9 +29,9 @@ const AllGig: React.FC = () => {
   const maxRef = useRef<HTMLInputElement>(null);
 
   // Auto-fetch whenever sort or search changes
-  const { isLoading, error, data, refetch } = useQuery<Gig[], Error>(
-    ["gigs", sort, searchQuery, category], // queryKey
-    async () => {
+  const { isLoading, error, data, refetch } = useQuery<Gig[], Error>({
+    queryKey: ["gigs", sort, searchQuery, category],
+    queryFn: async () => {
       const min = minRef.current?.value || "";
       const max = maxRef.current?.value || "";
       let query = `/gigs?sort=${sort}&min=${min}&max=${max}`;
@@ -40,12 +40,9 @@ const AllGig: React.FC = () => {
       if (category) query += `&cat=${encodeURIComponent(category)}`;
 
       const res = await newRequest.get(query);
-      return res.data;
+      return res.data as Gig[];
     },
-    {
-      keepPreviousData: true,
-    }
-  );
+  });
 
   const reSort = (type: "sales" | "createdAt") => {
     setSort(type);
