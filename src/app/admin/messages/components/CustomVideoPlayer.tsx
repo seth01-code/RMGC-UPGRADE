@@ -24,14 +24,14 @@ const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   src,
   fileExtension,
 }) => {
-  const smallVideoRef = useRef<HTMLVideoElement>(null);
-  const fullVideoRef = useRef<HTMLVideoElement>(null);
+  const smallVideoRef = useRef<HTMLVideoElement | null>(null);
+  const fullVideoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isFullView, setIsFullView] = useState(false);
 
   const togglePlay = (
-    videoRef: React.RefObject<HTMLVideoElement>,
+    videoRef: React.RefObject<HTMLVideoElement | null>,
     setPlaying: React.Dispatch<React.SetStateAction<boolean>>
   ) => {
     const video = videoRef.current;
@@ -51,12 +51,12 @@ const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
   };
 
   const handleProgress = (
-    videoRef: React.RefObject<HTMLVideoElement>,
+    videoRef: React.RefObject<HTMLVideoElement | null>,
     setProgressState: React.Dispatch<React.SetStateAction<number>>
   ) => {
     const video = videoRef.current;
     if (!video || !video.duration) return;
-    setProgress((video.currentTime / video.duration) * 100);
+    setProgressState((video.currentTime / video.duration) * 100);
   };
 
   const handleFullScreen = () => {
@@ -94,7 +94,7 @@ const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
           className="rounded-lg w-full border border-gray-600 cursor-pointer object-cover shadow-md"
           onTimeUpdate={() => handleProgress(smallVideoRef, setProgress)}
         >
-          <source src={src} type={`video/${fileExtension || "mp4"}`} />
+          <source src={src} type={`video/${fileExtension}`} />
         </video>
 
         {/* Play/Pause Overlay */}
@@ -144,7 +144,7 @@ const CustomVideoPlayer: React.FC<CustomVideoPlayerProps> = ({
             autoPlay
             onTimeUpdate={() => handleProgress(fullVideoRef, setProgress)}
           >
-            <source src={src} type={`video/${fileExtension || "mp4"}`} />
+            <source src={src} type={`video/${fileExtension}`} />
           </video>
         </div>
       )}
