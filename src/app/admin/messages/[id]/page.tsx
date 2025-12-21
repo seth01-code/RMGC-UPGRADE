@@ -42,7 +42,6 @@ interface Conversation {
   updatedAt: string;
 }
 
-
 const MessageDetail: React.FC = () => {
   const { id } = useParams();
   const router = useRouter(); // <-- add router
@@ -221,24 +220,28 @@ const MessageDetail: React.FC = () => {
                   </div>
                 )}
 
-                {msg.media?.match(
-                  /\.(jpeg|jpg|png|gif|webp|svg|bmp|tiff|tif|ico|heic|heif|avif)$/
-                ) && <ChatImage message={msg} />}
+                {msg.media &&
+                  /\.(jpeg|jpg|png|gif|webp|svg|bmp|tiff|tif|ico|heic|heif|avif)$/.test(
+                    msg.media
+                  ) && <ChatImage media={msg.media} />}
 
-                {msg.media?.match(/\.(mp4|webm|ogg|mov|avi|mkv|flv|wmv)$/) && (
-                  <CustomVideoPlayer
-                    src={msg.media}
-                    fileExtension={msg.media.split(".").pop()}
-                  />
-                )}
+                {msg.media &&
+                  /\.(mp4|webm|ogg|mov|avi|mkv|flv|wmv)$/.test(msg.media) && (
+                    <CustomVideoPlayer
+                      src={msg.media}
+                      fileExtension={msg.media.split(".").pop() ?? ""}
+                    />
+                  )}
 
-                {msg.media?.match(/\.(mp3|wav|ogg|flac|aac|m4a)$/) && (
-                  <AudioMessagePlayer
-                    src={msg.media}
-                    fileExtension={msg.media.split(".").pop()}
-                    isSender={isSender}
-                  />
-                )}
+                {msg.media &&
+                  /\.(mp3|wav|ogg|flac|aac|m4a)$/.test(msg.media) && (
+                    <AudioMessagePlayer
+                      src={msg.media}
+                      fileExtension={msg.media.split(".").pop() ?? ""}
+                      fileName={msg.media.split("/").pop() ?? "audio"}
+                      isSender={isSender}
+                    />
+                  )}
 
                 {msg.media && (
                   <div
@@ -273,7 +276,7 @@ const MessageDetail: React.FC = () => {
                 <div className="relative w-8 h-8 rounded-full overflow-hidden">
                   <Image
                     src={
-                                            sender?.img ||
+                      sender?.img ||
                       "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
                     }
                     alt="Sender"
@@ -291,4 +294,3 @@ const MessageDetail: React.FC = () => {
 };
 
 export default MessageDetail;
-

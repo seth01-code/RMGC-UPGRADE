@@ -13,7 +13,11 @@ interface AudioMessagePlayerProps {
   isSender: boolean;
 }
 
-let currentlyPlaying: any = null;
+let currentlyPlaying:
+  | HTMLAudioElement
+  | WaveSurfer
+  | null = null;
+
 
 const AudioMessagePlayer: React.FC<AudioMessagePlayerProps> = ({
   src,

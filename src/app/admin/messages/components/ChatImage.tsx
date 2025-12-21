@@ -7,24 +7,22 @@ import "react-loading-skeleton/dist/skeleton.css";
 import { FaExclamationCircle, FaTimes } from "react-icons/fa";
 
 interface ChatImageProps {
-  message: {
-    media: string;
-  };
+  media: string;
 }
 
-const ChatImage: React.FC<ChatImageProps> = ({ message }) => {
+const ChatImage: React.FC<ChatImageProps> = ({ media }) => {
   const [isFullView, setIsFullView] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
   const imageTypes = ["jpg", "jpeg", "png", "gif", "webp"];
-  const fileExtension = message?.media?.split(".").pop()?.toLowerCase() || "";
+  const fileExtension = media.split(".").pop()?.toLowerCase() ?? "";
 
   if (!imageTypes.includes(fileExtension)) return null;
 
   return (
     <>
-      {/* Image Thumbnail */}
+      {/* Thumbnail */}
       <div className="relative w-full max-w-xs sm:max-w-sm md:max-w-md cursor-pointer rounded-lg overflow-hidden">
         {!isLoaded && !hasError && <Skeleton height={200} />}
         {hasError && (
@@ -34,7 +32,7 @@ const ChatImage: React.FC<ChatImageProps> = ({ message }) => {
         )}
         {!hasError && (
           <Image
-            src={message.media}
+            src={media}
             alt="Chat Image"
             width={400}
             height={300}
@@ -47,7 +45,7 @@ const ChatImage: React.FC<ChatImageProps> = ({ message }) => {
         )}
       </div>
 
-      {/* Full View Modal */}
+      {/* Full View */}
       {isFullView && (
         <div
           className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4"
@@ -59,6 +57,7 @@ const ChatImage: React.FC<ChatImageProps> = ({ message }) => {
           >
             <FaTimes />
           </button>
+
           <div className="relative max-w-full max-h-[90vh]">
             {!isLoaded && !hasError && <Skeleton height={400} width={400} />}
             {hasError && (
@@ -68,11 +67,11 @@ const ChatImage: React.FC<ChatImageProps> = ({ message }) => {
             )}
             {!hasError && (
               <Image
-                src={message.media}
+                src={media}
                 alt="Full View"
                 width={800}
                 height={600}
-                className="rounded-lg shadow-lg transition-transform scale-100 hover:scale-105"
+                className="rounded-lg shadow-lg"
                 style={{ objectFit: "contain", width: "100%", height: "auto" }}
               />
             )}
