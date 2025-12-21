@@ -229,7 +229,17 @@ const MessageDetail: React.FC = () => {
                   /\.(mp4|webm|ogg|mov|avi|mkv|flv|wmv)$/.test(msg.media) && (
                     <CustomVideoPlayer
                       src={msg.media}
-                      fileExtension={msg.media.split(".").pop() ?? ""}
+                      fileExtension={
+                        (msg.media.split(".").pop() as
+                          | "mp4"
+                          | "webm"
+                          | "ogg"
+                          | "mov"
+                          | "avi"
+                          | "mkv"
+                          | "flv"
+                          | "wmv") ?? "mp4"
+                      }
                     />
                   )}
 
