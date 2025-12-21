@@ -101,9 +101,14 @@ const Add: React.FC = () => {
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
+    const { name, value } = e.target;
+
     dispatch({
       type: "CHANGE_INPUT",
-      payload: { name: e.target.name, value: e.target.value },
+      payload: {
+        name: name as keyof GigState,
+        value,
+      },
     });
   };
 
