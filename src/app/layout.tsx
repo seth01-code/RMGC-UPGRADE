@@ -73,6 +73,14 @@ export default function RootLayout({
       "/about": "About Us - RMGC",
       "/pay-org": "Organization Payment - RMGC",
       "/org-processing": "Processing Payment - RMGC",
+      "/remote/dashboard": "Remote Worker Dashboard - RMGC",
+      "/remote/jobs": "Remote Jobs - RMGC",
+      "/remote/applications": "My Applications - RMGC",
+      "/remote/profile": "My Profile - RMGC",
+      "/remote/billing": "Billing & Subscription - RMGC",
+      "/payment/remote-vip": "Remote Worker VIP Subscription - RMGC",
+      "/payment/freelancers": "Freelancer Payment - RMGC",
+      "/payment/freelancers/success": "Freelancer Payment Success - RMGC",
     };
 
     const dynamicRoutes: [RegExp, string][] = [

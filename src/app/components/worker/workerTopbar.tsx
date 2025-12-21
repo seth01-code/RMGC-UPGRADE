@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Crown, LogOut, Menu, X } from "lucide-react";
+import { Crown, LogOut, Menu, X } from "lucide-react";
 import { MdVerified } from "react-icons/md";
 import { useState } from "react";
 
