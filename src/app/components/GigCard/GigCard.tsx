@@ -9,14 +9,21 @@ import starIcon from "../../../assets/images/star.png";
 import { useExchangeRate } from "../../hooks/useExchangeRate";
 import { useTranslation } from "react-i18next";
 
-interface Gig {
+/* =======================
+   SHARED TYPES
+======================= */
+
+export interface Gig {
   _id: string;
   title?: string;
   cover: string;
   price: number;
-  desc: string;
-  totalStars: number;
-  starNumber: number;
+
+  // Optional (important!)
+  desc?: string;
+  totalStars?: number;
+  starNumber?: number;
+
   userId: string;
 }
 
@@ -30,9 +37,16 @@ interface GigCardProps {
   item: Gig;
 }
 
+/* =======================
+   COMPONENT
+======================= */
+
 const GigCard: React.FC<GigCardProps> = ({ item }) => {
   const { t } = useTranslation();
 
+  /* =======================
+     FETCH GIG OWNER
+  ======================= */
   const {
     isLoading: gigUserLoading,
     error: gigUserError,
@@ -45,6 +59,9 @@ const GigCard: React.FC<GigCardProps> = ({ item }) => {
     },
   });
 
+  /* =======================
+     FETCH AUTH USER
+  ======================= */
   const {
     isLoading: userLoading,
     data: userData,
@@ -57,6 +74,9 @@ const GigCard: React.FC<GigCardProps> = ({ item }) => {
     },
   });
 
+  /* =======================
+     PRICE CONVERSION
+  ======================= */
   const userCountry = userData?.country || "United States";
   const { exchangeRate, currencySymbol } = useExchangeRate(userCountry);
 
@@ -64,7 +84,9 @@ const GigCard: React.FC<GigCardProps> = ({ item }) => {
     item.price * exchangeRate
   );
 
-  // Glassy loading effect
+  /* =======================
+     LOADING STATE
+  ======================= */
   if (gigUserLoading || userLoading) {
     return (
       <div className="w-[324px] h-[430px] rounded-lg bg-white/20 backdrop-blur-md border border-gray-200 animate-pulse flex flex-col">
@@ -90,26 +112,37 @@ const GigCard: React.FC<GigCardProps> = ({ item }) => {
     );
   }
 
-  if (gigUserError || userError)
+  /* =======================
+     ERROR STATE
+  ======================= */
+  if (gigUserError || userError) {
     return (
-      <div>
-        {t("Gig or User Does not exist or you are not properly authenticated")}
+      <div className="text-sm text-red-500">
+        {t("Gig or user data could not be loaded")}
       </div>
     );
+  }
+
+  /* =======================
+     SAFE RATING LOGIC
+  ======================= */
+  const totalStars = item.totalStars ?? 0;
+  const starNumber = item.starNumber ?? 0;
 
   const averageRating =
-    !isNaN(item.totalStars / item.starNumber) && item.starNumber > 0
-      ? Math.round(item.totalStars / item.starNumber)
-      : 0;
+    starNumber > 0 ? Math.round(totalStars / starNumber) : 0;
 
+  /* =======================
+     RENDER
+  ======================= */
   return (
     <Link href={`/gig/${item._id}`} className="group">
       <div className="w-[324px] h-[430px] border border-gray-200 shadow-md rounded-lg overflow-hidden flex flex-col transition-transform transform hover:scale-105">
-        {/* Gig Cover */}
+        {/* Cover */}
         <div className="relative w-full h-[200px]">
           <Image
             src={item.cover}
-            alt={item.title || "Gig Cover"}
+            alt={item.title || "Gig cover"}
             fill
             className="object-cover"
           />
@@ -134,7 +167,9 @@ const GigCard: React.FC<GigCardProps> = ({ item }) => {
             </span>
           </div>
 
-          <p className="text-gray-900 line-clamp-3 break-words whitespace-pre-line text-sm">{item.desc}</p>
+          <p className="text-gray-900 line-clamp-3 break-words whitespace-pre-line text-sm">
+            {item.desc || t("No description provided")}
+          </p>
 
           <div className="flex items-center gap-2">
             <Image src={starIcon} alt="star" width={14} height={14} />
