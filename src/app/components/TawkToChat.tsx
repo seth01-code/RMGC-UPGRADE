@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 declare global {
   interface Window {
-    Tawk_API?: unknown;
+    Tawk_API?: any;
     Tawk_LoadStart?: Date;
   }
 }
@@ -18,7 +18,6 @@ const TawkToChat = () => {
     if (restrictedRoutes.includes(pathname)) return;
     if (document.getElementById("tawkScript")) return;
 
-    // Initialize Tawk globals
     window.Tawk_API = window.Tawk_API || {};
     window.Tawk_LoadStart = new Date();
 
@@ -30,27 +29,30 @@ const TawkToChat = () => {
     script.setAttribute("crossorigin", "*");
     document.body.appendChild(script);
 
-    script.onload = () => {
-      const waitForTawk = () => {
-        if (!window.Tawk_API) return setTimeout(waitForTawk, 300);
+    // 🔥 FORCE LEFT POSITION WITH CSS
+    const style = document.createElement("style");
+    style.id = "tawkLeftFix";
+    style.innerHTML = `
+      iframe[src*="tawk.to"] {
+        left: 20px !important;
+        right: auto !important;
+      }
 
-        try {
-          // Force widget to the LEFT
-          window.Tawk_API.setPosition("left");
-        } catch (err) {
-          console.warn("Tawk API init failed:", err);
-        }
-      };
-
-      waitForTawk();
-    };
+      .tawk-button,
+      .tawk-min-container {
+        left: 20px !important;
+        right: auto !important;
+      }
+    `;
+    document.head.appendChild(style);
 
     return () => {
       document.getElementById("tawkScript")?.remove();
+      document.getElementById("tawkLeftFix")?.remove();
     };
   }, [pathname]);
 
-  return null; // No custom button anymore
+  return null;
 };
 
 export default TawkToChat;
