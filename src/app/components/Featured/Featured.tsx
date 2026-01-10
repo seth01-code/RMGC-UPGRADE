@@ -90,17 +90,12 @@ const Featured: React.FC = () => {
   return (
     <section className="relative w-full h-auto lg:h-[600px] flex items-center justify-center text-white rounded-bl-[80px] overflow-visible bg-transparent">
       {/* Background Video */}
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
+      <Image
+        src="/remote.jpg"
+        alt="Background Video"
+        fill  
         className="absolute top-0 left-0 w-full h-full object-cover rounded-b-[120px]"
-      >
-        <source src="/serve.mp4" type="video/mp4" />
-        Your browser does not support the video tag.
-      </video>
-
+      />
       {/* Floating Circles all around hero */}
       <div className="absolute inset-0 bottom-[-150px] overflow-visible z-[2] pointer-events-none">
         {circles.map((circle, index) => (

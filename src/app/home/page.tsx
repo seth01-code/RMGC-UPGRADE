@@ -42,10 +42,11 @@ const Counter = ({
 };
 
 const HomePage: React.FC = () => {
-  const features: string[] = [
-    "Connect to freelancers with proven business experience",
-    "Get matched with the perfect talent",
-    "Explore a wide range of service listings",
+  const features = [
+    "Hire verified freelancers for short-term or long-term projects",
+    "Organizations can post jobs and access global remote talent",
+    "Remote workers discover flexible and high-value opportunities",
+    "Secure payments and role-based access for every user",
   ];
 
   const stats = [
@@ -178,15 +179,12 @@ const HomePage: React.FC = () => {
 
       {/* Hero Section */}
       <section className="relative py-16 md:py-24 lg:py-32 text-white bg-gray-900 rounded-t-[120px] overflow-hidden">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
+        <Image
+          src="/explore.jpg"
+          alt="Hero Background"
+          fill
           className="absolute top-0 left-0 w-full h-full object-cover rounded-t-[120px]"
-        >
-          <source src="/call.mp4" type="video/mp4" />
-        </video>
+        />
         <div className="absolute inset-0 bg-black/60 rounded-t-[120px]" />
 
         {/* Floating Circles */}
@@ -213,7 +211,7 @@ const HomePage: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1.2, delay: 0.3 }}
             >
-              Empowering businesses and freelancers through innovation
+              Connecting organizations, freelancers, and remote talent worldwide
             </motion.h2>
 
             <div className="mt-6 space-y-3">
