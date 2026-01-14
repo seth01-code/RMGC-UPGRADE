@@ -87,19 +87,19 @@ const AboutUs: React.FC = () => {
     },
     {
       q: "How do I join as a service provider?",
-      a: "To join, freelancers pay a **one-time registration fee of ₦5,000** to complete their profile and start applying for jobs. Remote workers can register for free, but can upgrade to the **VIP tier** for premium access to higher-paying jobs. Verified organizations pay a registration fee to post jobs and access the talent pool.",
+      a: "To join, freelancers pay a one-time registration fee of ₦5,000 to complete their profile and start uploading gigs and gaining access to clients. Remote workers can register for free, but can upgrade to the VIP tier for premium access to higher-paying jobs. Verified organizations pay a registration fee to post jobs and start receiving applications.",
     },
     {
       q: "Are there recurring fees or subscription plans?",
-      a: "Freelancers do not have recurring fees beyond the one-time registration. Remote workers can choose a **VIP subscription** for access to high-paying jobs, billed monthly or yearly depending on the plan. Organizations pay a registration fee to post jobs and access premium services.",
+      a: "Freelancers do not have recurring fees beyond the one-time registration. Remote workers can choose a VIP subscription for access to high-paying jobs, billed yearly. Organizations pay a Subscription fee yearly to post jobs and receive job applications.",
     },
     {
       q: "What payment methods are supported?",
-      a: "RMGC supports Paystack and Flutterwave for all transactions, allowing payments in Naira, USD, or other supported currencies.",
+      a: "RMGC supports Paystack and Flutterwave(Card Only Option) for all transactions, allowing payments in Naira, USD, or other supported currencies.",
     },
     {
       q: "Do I need to verify my account?",
-      a: "Yes. Freelancers and organizations must verify their account using valid identification and contact details to ensure trust and security on the platform.",
+      a: "Yes. All users must verify their account using valid identification and contact details to ensure trust and security on the platform.",
     },
   ];
 
