@@ -57,17 +57,12 @@ const Footer: React.FC = () => {
   return (
     <footer className="relative w-full rounded-t-[10px] text-gray-100 overflow-hidden">
       {/* Background Video */}
-      <video
-        autoPlay
-        loop
-        muted
-        playsInline
+      <Image
+        src="/foot.jpg"
+        alt="Footer Background"
+        fill
         className="absolute top-0 left-0 w-full h-full object-cover z-0 rounded-t-[10px]"
-      >
-        <source src="/background.mp4" type="video/mp4" />
-        Your browser does not support the video tag.
-      </video>
-
+      />
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/50 z-10 rounded-t-[10px]"></div>
 

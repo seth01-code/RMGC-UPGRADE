@@ -13,6 +13,7 @@ import {
   Merriweather,
   Fira_Code,
 } from "next/font/google";
+
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -101,6 +102,18 @@ export default function RootLayout({
     document.title = title;
   }, [pathname]);
 
+  // ✅ Send page_view event to GTM on every route change
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as any).dataLayer = (window as any).dataLayer || [];
+      (window as any).dataLayer.push({
+        event: "page_view",
+        page_path: pathname,
+        page_title: document.title,
+      });
+    }
+  }, [pathname]);
+
   return (
     <html lang="en">
       {/* ✅ Google Tag Manager */}
@@ -115,20 +128,6 @@ export default function RootLayout({
             j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;
             f.parentNode.insertBefore(j,f);
           })(window,document,'script','dataLayer','GTM-K7DXXWKT');
-        `}
-      </Script>
-
-      {/* ✅ Google Analytics (GA4) */}
-      <Script
-        src="https://www.googletagmanager.com/gtag/js?id=G-MMRP5Q1KVX"
-        strategy="afterInteractive"
-      />
-      <Script id="ga4-init" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', 'G-MMRP5Q1KVX');
         `}
       </Script>
 
@@ -147,14 +146,14 @@ export default function RootLayout({
           </ClientProviders>
         )}
 
-        {/* ✅ GTM Fallback for no-script users */}
+        {/* ✅ GTM no-script fallback */}
         <noscript>
           <iframe
             src="https://www.googletagmanager.com/ns.html?id=GTM-K7DXXWKT"
             height="0"
             width="0"
             style={{ display: "none", visibility: "hidden" }}
-          ></iframe>
+          />
         </noscript>
       </body>
     </html>
