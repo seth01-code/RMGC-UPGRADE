@@ -26,10 +26,11 @@ export default function NewJobPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  /* =======================
+     Handle Changes
+  ======================= */
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-    >,
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
     field?: string,
     index?: number
   ) => {
@@ -45,15 +46,20 @@ export default function NewJobPage() {
     setForm({ ...form, [name]: value });
   };
 
-  // Salary handlers
+  /* =======================
+     Salary Handlers
+  ======================= */
   const handleSalaryChange = (
     e: React.ChangeEvent<HTMLInputElement>,
     field: "min" | "max"
   ) => {
-    const value = e.target.value === "" ? undefined : Number(e.target.value);
+    // Remove commas for internal number parsing
+    const raw = e.target.value.replace(/,/g, "");
+    const numericValue = raw === "" ? undefined : Number(raw);
+
     setForm({
       ...form,
-      salaryRange: { ...form.salaryRange, [field]: value },
+      salaryRange: { ...form.salaryRange, [field]: numericValue },
     });
   };
 
@@ -64,6 +70,14 @@ export default function NewJobPage() {
     });
   };
 
+  const formatNumber = (num?: number) => {
+    if (num === undefined) return "";
+    return num.toLocaleString();
+  };
+
+  /* =======================
+     Submit Handler
+  ======================= */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -78,6 +92,9 @@ export default function NewJobPage() {
     }
   };
 
+  /* =======================
+     Render Array Inputs
+  ======================= */
   const renderArrayInput = (
     label: string,
     field: "requirements" | "responsibilities" | "benefits"
@@ -230,7 +247,7 @@ export default function NewJobPage() {
             />
           </div>
 
-          {/* Salary Range USD / NGN */}
+          {/* Salary Range */}
           <div className="col-span-2 space-y-3">
             <label className="text-sm font-medium text-gray-600">
               Salary Range
@@ -249,7 +266,6 @@ export default function NewJobPage() {
               >
                 USD
               </button>
-
               <button
                 type="button"
                 onClick={() => handleCurrencyChange("NGN")}
@@ -266,17 +282,16 @@ export default function NewJobPage() {
             {/* Salary Inputs */}
             <div className="flex gap-4">
               <input
-                type="number"
+                type="text"
                 placeholder={`Minimum (${form.salaryRange.currency})`}
-                value={form.salaryRange.min ?? ""}
+                value={formatNumber(form.salaryRange.min)}
                 onChange={(e) => handleSalaryChange(e, "min")}
                 className="border rounded-lg px-4 py-2 w-full focus:ring-orange-400"
               />
-
               <input
-                type="number"
+                type="text"
                 placeholder={`Maximum (${form.salaryRange.currency})`}
-                value={form.salaryRange.max ?? ""}
+                value={formatNumber(form.salaryRange.max)}
                 onChange={(e) => handleSalaryChange(e, "max")}
                 className="border rounded-lg px-4 py-2 w-full focus:ring-orange-400"
               />
