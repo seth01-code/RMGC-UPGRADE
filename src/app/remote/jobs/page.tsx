@@ -8,7 +8,6 @@ import newRequest from "../../utils/newRequest";
 /* =======================
    Types
 ======================= */
-
 interface Job {
   id: string;
   title: string;
@@ -100,18 +99,18 @@ export default function WorkerJobsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
+  /* =======================
+     Fetch user, jobs, applications
+  ======================= */
   useEffect(() => {
-    const storedUser = localStorage.getItem("currentUser");
-    if (!storedUser) return router.replace("/login");
-
-    const parsedUser = JSON.parse(storedUser);
-    if (parsedUser.role !== "remote_worker") return router.replace("/login");
-
-    setUser(parsedUser);
-
     const fetchData = async () => {
       try {
-        /* Fetch Jobs */
+        // Get latest user
+        const userRes = await newRequest.get("/users/me");
+        const currentUser = userRes.data;
+        setUser(currentUser);
+
+        // Get jobs
         const jobsRes = await newRequest.get("/jobs/");
         const fetchedJobs: Job[] = jobsRes.data.map((j: any) => {
           const currency = j.salaryRange?.currency || "USD";
@@ -132,24 +131,20 @@ export default function WorkerJobsPage() {
           };
         });
 
-        const vipStatus = parsedUser.vipSubscription?.active;
-
-        /* VIP FILTER:
-           Free → USD max ≤ 250, NGN max ≤ 200,000
-           VIP → all jobs
-        */
+        // VIP filter
+        const vipStatus = currentUser.vipSubscription?.active;
         const visibleJobs = vipStatus
           ? fetchedJobs
           : fetchedJobs.filter((job) => {
               if (job.currency === "USD") return job.salaryMax <= 250;
               if (job.currency === "NGN") return job.salaryMax <= 200_000;
-              return true; // fallback
+              return true;
             });
 
         setJobs(visibleJobs);
         setFilteredJobs(visibleJobs);
 
-        /* Fetch User Applications */
+        // Get user applications
         const appsRes = await newRequest.get("/application/user");
         const appsData: Application[] = appsRes.data.map((a: any) => ({
           jobId: a.jobId._id,
@@ -157,7 +152,8 @@ export default function WorkerJobsPage() {
         }));
         setUserApplications(appsData);
       } catch (err) {
-        console.error("Error fetching jobs or applications:", err);
+        console.error("Error fetching data:", err);
+        router.replace("/login");
       } finally {
         setLoading(false);
       }
