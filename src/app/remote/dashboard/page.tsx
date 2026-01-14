@@ -11,6 +11,8 @@ interface Job {
   organization: string;
   salary: string;
   minSalary: number;
+  maxSalary: number;
+  currency: "USD" | "NGN";
 }
 
 interface Application {
@@ -24,11 +26,20 @@ export default function WorkerDashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [recommendedJobs, setRecommendedJobs] = useState<Job[]>([]);
+  const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
   const [recentApplications, setRecentApplications] = useState<Application[]>(
     []
   );
-  const [savedJobsCount, setSavedJobsCount] = useState(0);
   const [userApplications, setUserApplications] = useState<Application[]>([]);
+  const [savedJobsCount, setSavedJobsCount] = useState(0);
+
+  const [salaryFilter, setSalaryFilter] = useState({
+    min: undefined as number | undefined,
+    max: undefined as number | undefined,
+  });
+
+  // Format numbers with commas
+  const formatNumber = (num: number) => num.toLocaleString();
 
   /* ---------------- FETCH USER DATA ---------------- */
   useEffect(() => {
@@ -52,7 +63,7 @@ export default function WorkerDashboardPage() {
     fetchUser();
   }, [router]);
 
-  /* ---------------- FETCH RECOMMENDED JOBS ---------------- */
+  /* ---------------- FETCH JOBS ---------------- */
   useEffect(() => {
     if (!user) return;
 
@@ -63,17 +74,29 @@ export default function WorkerDashboardPage() {
           id: j._id,
           title: j.title,
           organization: j.organizationId?.organization?.name || "Unknown",
-          salary: `$${j.salaryRange?.min || 0} - $${j.salaryRange?.max || 0}`,
           minSalary: j.salaryRange?.min || 0,
+          maxSalary: j.salaryRange?.max || 0,
+          currency: j.salaryRange?.currency || "USD",
+          salary:
+            j.salaryRange?.currency === "NGN"
+              ? `₦${formatNumber(j.salaryRange?.min || 0)} - ₦${formatNumber(
+                  j.salaryRange?.max || 0
+                )}`
+              : `$${formatNumber(j.salaryRange?.min || 0)} - $${formatNumber(
+                  j.salaryRange?.max || 0
+                )}`,
         }));
 
         // VIP filter: hide high-paying jobs for free users
         const vipStatus = user.vipSubscription?.active;
         if (!vipStatus) {
-          jobs = jobs.filter((j) => j.minSalary <= 250);
+          jobs = jobs.filter((j) =>
+            j.currency === "USD" ? j.maxSalary <= 250 : j.maxSalary <= 200_000
+          );
         }
 
         setRecommendedJobs(jobs);
+        setFilteredJobs(jobs);
       } catch (err) {
         console.error("Error fetching jobs:", err);
       }
@@ -82,7 +105,7 @@ export default function WorkerDashboardPage() {
     fetchJobs();
   }, [user]);
 
-  /* ---------------- FETCH RECENT APPLICATIONS ---------------- */
+  /* ---------------- FETCH APPLICATIONS ---------------- */
   useEffect(() => {
     if (!user) return;
 
@@ -104,6 +127,23 @@ export default function WorkerDashboardPage() {
 
     fetchApplications();
   }, [user]);
+
+  /* ---------------- SALARY FILTERING ---------------- */
+  useEffect(() => {
+    if (!recommendedJobs.length) return;
+
+    const filtered = recommendedJobs.filter((job) => {
+      const minCheck = salaryFilter.min
+        ? job.minSalary >= salaryFilter.min
+        : true;
+      const maxCheck = salaryFilter.max
+        ? job.maxSalary <= salaryFilter.max
+        : true;
+      return minCheck && maxCheck;
+    });
+
+    setFilteredJobs(filtered);
+  }, [salaryFilter, recommendedJobs]);
 
   if (!user) return null;
 
@@ -142,7 +182,9 @@ export default function WorkerDashboardPage() {
 
   // Determine lock message for recommended jobs
   const getLockMessage = (job: Job) => {
-    const salaryLock = job.minSalary > 250 && !isVIP;
+    const salaryLock =
+      (job.currency === "USD" && job.minSalary > 250 && !isVIP) ||
+      (job.currency === "NGN" && job.minSalary > 200_000 && !isVIP);
     const app = userApplications.find((a) => a.jobId === job.id);
     const applicationLock =
       app && ["pending", "accepted", "rejected"].includes(app.status);
@@ -196,11 +238,39 @@ export default function WorkerDashboardPage() {
         ))}
       </div>
 
+      {/* Salary Filter */}
+      <div className="flex gap-4">
+        <input
+          type="number"
+          placeholder={`Min Salary`}
+          className="border rounded-lg px-4 py-2 w-full focus:ring-orange-400"
+          value={salaryFilter.min ?? ""}
+          onChange={(e) =>
+            setSalaryFilter({
+              ...salaryFilter,
+              min: e.target.value ? Number(e.target.value) : undefined,
+            })
+          }
+        />
+        <input
+          type="number"
+          placeholder={`Max Salary`}
+          className="border rounded-lg px-4 py-2 w-full focus:ring-orange-400"
+          value={salaryFilter.max ?? ""}
+          onChange={(e) =>
+            setSalaryFilter({
+              ...salaryFilter,
+              max: e.target.value ? Number(e.target.value) : undefined,
+            })
+          }
+        />
+      </div>
+
       {/* Recommended Jobs */}
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold">Recommended Jobs</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {recommendedJobs.map((job) => {
+          {filteredJobs.map((job) => {
             const lockMessage = getLockMessage(job);
             return (
               <div
@@ -210,7 +280,6 @@ export default function WorkerDashboardPage() {
                 }}
                 className="relative bg-white p-5 rounded-xl shadow hover:shadow-lg cursor-pointer"
               >
-                {/* Lock overlay */}
                 {lockMessage && (
                   <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex flex-col items-center justify-center gap-2 rounded-xl z-10 p-4 text-center">
                     <Lock className="w-8 h-8 text-orange-600" />
@@ -219,7 +288,6 @@ export default function WorkerDashboardPage() {
                     </p>
                   </div>
                 )}
-
                 <h3 className="font-bold">{job.title}</h3>
                 <p className="text-gray-500">{job.organization}</p>
                 <p className="mt-2 font-medium text-green-700">{job.salary}</p>
@@ -242,7 +310,6 @@ export default function WorkerDashboardPage() {
             View all
           </button>
         </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {recentApplications.map((app) => (
             <div
@@ -274,7 +341,7 @@ export default function WorkerDashboardPage() {
               Access High-Paying Jobs
             </h3>
             <p className="text-orange-600 mt-1">
-              Jobs above $250 are available only to VIP workers.
+              Jobs above $250 / ₦200,000 are available only to VIP workers.
             </p>
           </div>
           <button
