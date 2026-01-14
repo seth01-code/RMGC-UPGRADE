@@ -5,37 +5,48 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { Crown, LogOut, Menu, X } from "lucide-react";
 import { MdVerified } from "react-icons/md";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import newRequest from "../../utils/newRequest";
 
 const links = [
   { href: "/remote/jobs", label: "Jobs" },
   { href: "/remote/applications", label: "Applications" },
-  // { href: "/remote/saved", label: "Saved" },
   { href: "/remote/profile", label: "Profile" },
   { href: "/remote/billing", label: "Billing" },
 ];
 
-export default function WorkerTopbar({ user }: { user: any }) {
+export default function WorkerTopbar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const isVIP = user?.vipSubscription?.active;
 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Fetch current user on mount
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await newRequest.get("/users/me");
+        setUser(res.data);
+      } catch (err) {
+        console.error("Error fetching user data:", err);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  if (!user) return null; // prevent flicker while loading
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-md border-b border-gray-100">
       <div className="max-w-[1400px] mx-auto h-16 px-4 sm:px-6 flex items-center justify-between gap-4">
         {/* ================= LEFT ================= */}
         <div className="flex items-center gap-6">
-          {/* Logo */}
-          <Link
-            href="/remote/dashboard"
-            className="font-extrabold text-xl text-orange-600"
-          >
+          <Link href="/remote/dashboard" className="font-extrabold text-xl text-orange-600">
             RMGC
           </Link>
 
-          {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-5">
             {links.map((l) => (
               <Link
@@ -55,7 +66,6 @@ export default function WorkerTopbar({ user }: { user: any }) {
 
         {/* ================= RIGHT ================= */}
         <div className="flex items-center gap-3">
-          {/* Mobile menu button */}
           <button
             className="md:hidden p-2 rounded-md hover:bg-gray-100"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -63,56 +73,47 @@ export default function WorkerTopbar({ user }: { user: any }) {
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
-          {/* Upgrade pill */}
           {!isVIP && (
             <button
               onClick={() => router.push("/payment/remote-vip")}
               className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-full bg-orange-100 text-orange-600 text-xs font-semibold hover:bg-orange-200 transition"
             >
-              <Crown className="w-4 h-4" />
-              Upgrade
+              <Crown className="w-4 h-4" /> Upgrade
             </button>
           )}
 
-          {/* VIP badge */}
           {isVIP && (
             <div className="hidden sm:flex items-center gap-1 text-xs font-semibold text-blue-600">
-              <MdVerified className="w-4 h-4" />
-              VIP
+              <MdVerified className="w-4 h-4" /> VIP
             </div>
           )}
 
-          {/* Profile pill */}
-          {user && (
-            <div className="flex items-center gap-2 bg-gray-100/80 backdrop-blur px-3 py-1 rounded-full">
-              <div className="w-8 h-8 relative rounded-full overflow-hidden bg-gray-300">
-                <Image
-                  src={
-                    user.img ||
-                    "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
-                  }
-                  alt="User"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-
-              <span className="text-sm truncate max-w-[100px] hidden sm:block">
-                {user.username}
-              </span>
-
-              <button
-                onClick={() => {
-                  localStorage.removeItem("currentUser");
-                  router.push("/login");
-                }}
-                className="p-1 rounded-md hover:bg-gray-200"
-                title="Logout"
-              >
-                <LogOut className="w-4 h-4 text-gray-600" />
-              </button>
+          <div className="flex items-center gap-2 bg-gray-100/80 backdrop-blur px-3 py-1 rounded-full">
+            <div className="w-8 h-8 relative rounded-full overflow-hidden bg-gray-300">
+              <Image
+                src={
+                  user.img ||
+                  "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
+                }
+                alt="User"
+                fill
+                className="object-cover"
+              />
             </div>
-          )}
+
+            <span className="text-sm truncate max-w-[100px] hidden sm:block">{user.username}</span>
+
+            <button
+              onClick={() => {
+                localStorage.removeItem("currentUser");
+                router.push("/login");
+              }}
+              className="p-1 rounded-md hover:bg-gray-200"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4 text-gray-600" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -136,7 +137,6 @@ export default function WorkerTopbar({ user }: { user: any }) {
               </li>
             ))}
 
-            {/* Upgrade / VIP for mobile */}
             {!isVIP && (
               <li>
                 <button

@@ -81,7 +81,10 @@ export default function LayoutWrapper({
         }
 
         // Block access to organization or admin explicitly
-        if (pathname.startsWith("/organization") || pathname.startsWith("/admin")) {
+        if (
+          pathname.startsWith("/organization") ||
+          pathname.startsWith("/admin")
+        ) {
           router.replace("/remote/dashboard");
         }
       }
