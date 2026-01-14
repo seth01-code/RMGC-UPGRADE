@@ -238,34 +238,6 @@ export default function WorkerDashboardPage() {
         ))}
       </div>
 
-      {/* Salary Filter */}
-      <div className="flex gap-4">
-        <input
-          type="number"
-          placeholder={`Min Salary`}
-          className="border rounded-lg px-4 py-2 w-full focus:ring-orange-400"
-          value={salaryFilter.min ?? ""}
-          onChange={(e) =>
-            setSalaryFilter({
-              ...salaryFilter,
-              min: e.target.value ? Number(e.target.value) : undefined,
-            })
-          }
-        />
-        <input
-          type="number"
-          placeholder={`Max Salary`}
-          className="border rounded-lg px-4 py-2 w-full focus:ring-orange-400"
-          value={salaryFilter.max ?? ""}
-          onChange={(e) =>
-            setSalaryFilter({
-              ...salaryFilter,
-              max: e.target.value ? Number(e.target.value) : undefined,
-            })
-          }
-        />
-      </div>
-
       {/* Recommended Jobs */}
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold">Recommended Jobs</h2>
