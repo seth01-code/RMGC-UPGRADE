@@ -56,15 +56,19 @@ export default function JobDetailsPage() {
   /* ================= HELPER ================= */
   const formatNumber = (num: number) => num.toLocaleString();
 
-  /* ================= AUTH ================= */
+  /* ================= FETCH USER ================= */
   useEffect(() => {
-    const storedUser = localStorage.getItem("currentUser");
-    if (!storedUser) return router.replace("/login");
+    const fetchUser = async () => {
+      try {
+        const res = await newRequest.get("/users/me");
+        setUser(res.data);
+      } catch (err) {
+        console.error("Failed to fetch user:", err);
+        router.replace("/login");
+      }
+    };
 
-    const parsedUser = JSON.parse(storedUser);
-    if (parsedUser.role !== "remote_worker") return router.replace("/login");
-
-    setUser(parsedUser);
+    fetchUser();
   }, [router]);
 
   /* ================= FETCH JOB ================= */
