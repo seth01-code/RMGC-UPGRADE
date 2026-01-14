@@ -13,10 +13,11 @@ interface Job {
   id: string;
   title: string;
   organization: string;
-  salary: string; // "$100 - $250"
+  salary: string; // "$100 - $250" or "₦70,000 - ₦200,000"
   remoteType: string;
   salaryMin: number;
   salaryMax: number;
+  currency: "USD" | "NGN";
 }
 
 interface Application {
@@ -107,21 +108,29 @@ export default function WorkerJobsPage() {
           id: j._id,
           title: j.title,
           organization: j.organizationId?.organization?.name || "Unknown",
-          salary: `$${j.salaryRange?.min || 0} - $${j.salaryRange?.max || 0}`,
+          salary:
+            j.salaryRange?.currency === "NGN"
+              ? `₦${j.salaryRange?.min || 0} - ₦${j.salaryRange?.max || 0}`
+              : `$${j.salaryRange?.min || 0} - $${j.salaryRange?.max || 0}`,
           salaryMin: j.salaryRange?.min || 0,
           salaryMax: j.salaryRange?.max || 0,
+          currency: j.salaryRange?.currency || "USD",
           remoteType: j.type || "Remote",
         }));
 
         const vipStatus = parsedUser.vipSubscription?.active;
 
         /* VIP FILTER:
-           Free → max salary ≤ $250
+           Free → USD max ≤ 250, NGN max ≤ 200,000
            VIP → all jobs
         */
         const visibleJobs = vipStatus
           ? fetchedJobs
-          : fetchedJobs.filter((job) => job.salaryMax <= 250);
+          : fetchedJobs.filter((job) => {
+              if (job.currency === "USD") return job.salaryMax <= 250;
+              if (job.currency === "NGN") return job.salaryMax <= 200_000;
+              return true; // fallback
+            });
 
         setJobs(visibleJobs);
         setFilteredJobs(visibleJobs);
@@ -168,7 +177,9 @@ export default function WorkerJobsPage() {
 
     const vipStatus = user.vipSubscription?.active;
 
-    const salaryLock = job.salaryMax > 250 && !vipStatus;
+    const salaryLock =
+      (!vipStatus && job.currency === "USD" && job.salaryMax > 250) ||
+      (!vipStatus && job.currency === "NGN" && job.salaryMax > 200_000);
 
     const application = userApplications.find((app) => app.jobId === job.id);
 

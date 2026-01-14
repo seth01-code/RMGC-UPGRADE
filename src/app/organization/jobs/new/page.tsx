@@ -11,9 +11,9 @@ export default function NewJobPage() {
   const router = useRouter();
   const [form, setForm] = useState({
     title: "",
-    type: "remote",
+    type: "Full-time",
     location: "Remote",
-    salaryRange: { min: 0, max: 0, currency: "USD" },
+    salaryRange: { min: undefined, max: undefined, currency: "USD" },
     description: "",
     deadline: "",
     industry: "",
@@ -42,23 +42,26 @@ export default function NewJobPage() {
       return;
     }
 
-    if (name === "minSalary") {
-      setForm({
-        ...form,
-        salaryRange: { ...form.salaryRange, min: Number(value) },
-      });
-      return;
-    }
-
-    if (name === "maxSalary") {
-      setForm({
-        ...form,
-        salaryRange: { ...form.salaryRange, max: Number(value) },
-      });
-      return;
-    }
-
     setForm({ ...form, [name]: value });
+  };
+
+  // Salary handlers
+  const handleSalaryChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: "min" | "max"
+  ) => {
+    const value = e.target.value === "" ? undefined : Number(e.target.value);
+    setForm({
+      ...form,
+      salaryRange: { ...form.salaryRange, [field]: value },
+    });
+  };
+
+  const handleCurrencyChange = (currency: "USD" | "NGN") => {
+    setForm({
+      ...form,
+      salaryRange: { min: undefined, max: undefined, currency },
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -227,30 +230,55 @@ export default function NewJobPage() {
             />
           </div>
 
-          {/* Salary Range */}
-          <div className="flex gap-2 col-span-2">
-            <div className="flex-1">
-              <label className="text-sm font-medium text-gray-600">
-                Minimum Salary (USD)
-              </label>
-              <input
-                type="number"
-                name="minSalary"
-                value={form.salaryRange.min}
-                onChange={handleChange}
-                className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
-              />
+          {/* Salary Range USD / NGN */}
+          <div className="col-span-2 space-y-3">
+            <label className="text-sm font-medium text-gray-600">
+              Salary Range
+            </label>
+
+            {/* Currency Switch */}
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() => handleCurrencyChange("USD")}
+                className={`px-4 py-2 rounded-lg border ${
+                  form.salaryRange.currency === "USD"
+                    ? "bg-orange-500 text-white"
+                    : "bg-white"
+                }`}
+              >
+                USD
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleCurrencyChange("NGN")}
+                className={`px-4 py-2 rounded-lg border ${
+                  form.salaryRange.currency === "NGN"
+                    ? "bg-orange-500 text-white"
+                    : "bg-white"
+                }`}
+              >
+                NGN
+              </button>
             </div>
-            <div className="flex-1">
-              <label className="text-sm font-medium text-gray-600">
-                Maximum Salary (USD)
-              </label>
+
+            {/* Salary Inputs */}
+            <div className="flex gap-4">
               <input
                 type="number"
-                name="maxSalary"
-                value={form.salaryRange.max}
-                onChange={handleChange}
-                className="border border-gray-300 rounded-lg px-4 py-2 w-full focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
+                placeholder={`Minimum (${form.salaryRange.currency})`}
+                value={form.salaryRange.min ?? ""}
+                onChange={(e) => handleSalaryChange(e, "min")}
+                className="border rounded-lg px-4 py-2 w-full focus:ring-orange-400"
+              />
+
+              <input
+                type="number"
+                placeholder={`Maximum (${form.salaryRange.currency})`}
+                value={form.salaryRange.max ?? ""}
+                onChange={(e) => handleSalaryChange(e, "max")}
+                className="border rounded-lg px-4 py-2 w-full focus:ring-orange-400"
               />
             </div>
           </div>
