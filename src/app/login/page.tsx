@@ -48,7 +48,7 @@ export default function LoginPage() {
         }
       } else if (userData.role === "remote_worker") {
         if (!userData.vipSubscription?.active) {
-          router.push("/remote/terms-privacy");
+          router.push("/remote/dashboard");
         } else {
           router.push("/remote/dashboard");
         }
