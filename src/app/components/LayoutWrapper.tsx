@@ -46,7 +46,7 @@ export default function LayoutWrapper({
     const storedUser = localStorage.getItem("currentUser");
 
     if (!storedUser) {
-      // No user, redirect all protected routes to login or home
+      // No user, redirect protected routes to login
       if (
         pathname.startsWith("/admin") ||
         pathname.startsWith("/remote") ||
@@ -63,30 +63,53 @@ export default function LayoutWrapper({
       setUser(parsedUser);
 
       /** ===== Route Guard Logic ===== */
+
+      // Admin Routes
       if (parsedUser.isAdmin) {
-        // Admin can only access /admin
         if (!pathname.startsWith("/admin")) router.replace("/admin/dashboard");
-      } else if (parsedUser.role === "remote_worker") {
-        // Remote worker can only access /remote
-        if (!pathname.startsWith("/remote")) router.replace("/remote/dashboard");
-        // Block access to /organization or /admin
-        if (pathname.startsWith("/organization") || pathname.startsWith("/admin"))
+      }
+      // Remote Worker Routes
+      else if (parsedUser.role === "remote_worker") {
+        // Routes remote workers can access
+        const allowedRemoteRoutes = ["/remote", "/payment/remote-vip"];
+        const isAllowed = allowedRemoteRoutes.some((route) =>
+          pathname.startsWith(route)
+        );
+
+        if (!isAllowed) {
           router.replace("/remote/dashboard");
-      } else if (parsedUser.role === "organization") {
-        // Organization can only access /organization
-        if (!pathname.startsWith("/organization"))
+        }
+
+        // Block access to organization or admin explicitly
+        if (pathname.startsWith("/organization") || pathname.startsWith("/admin")) {
+          router.replace("/remote/dashboard");
+        }
+      }
+      // Organization Routes
+      else if (parsedUser.role === "organization") {
+        const allowedOrgRoutes = ["/organization"];
+        const isAllowed = allowedOrgRoutes.some((route) =>
+          pathname.startsWith(route)
+        );
+
+        if (!isAllowed) {
           router.replace("/organization/dashboard");
-        // Block access to /remote or /admin
-        if (pathname.startsWith("/remote") || pathname.startsWith("/admin"))
+        }
+
+        // Block access to remote or admin
+        if (pathname.startsWith("/remote") || pathname.startsWith("/admin")) {
           router.replace("/organization/dashboard");
-      } else if (parsedUser.isSeller || !parsedUser.role) {
-        // Seller or client → can access only /
+        }
+      }
+      // Seller / Client Routes
+      else if (parsedUser.isSeller || !parsedUser.role) {
         if (
           pathname.startsWith("/admin") ||
           pathname.startsWith("/remote") ||
           pathname.startsWith("/organization")
-        )
+        ) {
           router.replace("/");
+        }
       }
     } catch (err) {
       console.error("Error parsing currentUser:", err);
