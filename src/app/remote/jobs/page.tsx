@@ -5,13 +5,18 @@ import { useRouter } from "next/navigation";
 import { Lock } from "lucide-react";
 import newRequest from "../../utils/newRequest";
 
+/* =======================
+   Types
+======================= */
+
 interface Job {
   id: string;
   title: string;
   organization: string;
-  salary: string; // e.g. "$300/month"
+  salary: string; // "$100 - $250"
   remoteType: string;
-  salaryMin: number; // numeric salary for VIP check
+  salaryMin: number;
+  salaryMax: number;
 }
 
 interface Application {
@@ -21,9 +26,13 @@ interface Application {
 
 interface JobCardProps {
   job: Job;
-  lockMessage?: string;
+  lockMessage?: string | null;
   onClick: () => void;
 }
+
+/* =======================
+   Job Card Component
+======================= */
 
 function JobCard({ job, lockMessage, onClick }: JobCardProps) {
   return (
@@ -31,7 +40,7 @@ function JobCard({ job, lockMessage, onClick }: JobCardProps) {
       className="relative bg-white rounded-xl shadow-md hover:shadow-xl transition cursor-pointer overflow-hidden border border-gray-100"
       onClick={onClick}
     >
-      {/* Lock overlay */}
+      {/* Lock Overlay */}
       {lockMessage && (
         <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex flex-col items-center justify-center gap-2 rounded-xl z-10 p-4 text-center">
           <Lock className="w-8 h-8 text-orange-600" />
@@ -68,6 +77,10 @@ function JobCard({ job, lockMessage, onClick }: JobCardProps) {
   );
 }
 
+/* =======================
+   Worker Jobs Page
+======================= */
+
 export default function WorkerJobsPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -83,11 +96,12 @@ export default function WorkerJobsPage() {
 
     const parsedUser = JSON.parse(storedUser);
     if (parsedUser.role !== "remote_worker") return router.replace("/login");
+
     setUser(parsedUser);
 
     const fetchData = async () => {
       try {
-        // Fetch all jobs
+        /* Fetch Jobs */
         const jobsRes = await newRequest.get("/jobs/");
         const fetchedJobs: Job[] = jobsRes.data.map((j: any) => ({
           id: j._id,
@@ -95,18 +109,24 @@ export default function WorkerJobsPage() {
           organization: j.organizationId?.organization?.name || "Unknown",
           salary: `$${j.salaryRange?.min || 0} - $${j.salaryRange?.max || 0}`,
           salaryMin: j.salaryRange?.min || 0,
+          salaryMax: j.salaryRange?.max || 0,
           remoteType: j.type || "Remote",
         }));
 
-        // Filter based on VIP
         const vipStatus = parsedUser.vipSubscription?.active;
+
+        /* VIP FILTER:
+           Free → max salary ≤ $250
+           VIP → all jobs
+        */
         const visibleJobs = vipStatus
           ? fetchedJobs
-          : fetchedJobs.filter((j) => j.salaryMin <= 250);
+          : fetchedJobs.filter((job) => job.salaryMax <= 250);
+
         setJobs(visibleJobs);
         setFilteredJobs(visibleJobs);
 
-        // Fetch user's applications
+        /* Fetch User Applications */
         const appsRes = await newRequest.get("/application/user");
         const appsData: Application[] = appsRes.data.map((a: any) => ({
           jobId: a.jobId._id,
@@ -123,7 +143,10 @@ export default function WorkerJobsPage() {
     fetchData();
   }, [router]);
 
-  // Filter jobs whenever search changes
+  /* =======================
+     Search Filter
+  ======================= */
+
   useEffect(() => {
     if (!jobs.length) return;
 
@@ -132,28 +155,33 @@ export default function WorkerJobsPage() {
         job.title.toLowerCase().includes(search.toLowerCase()) ||
         job.organization.toLowerCase().includes(search.toLowerCase())
     );
+
     setFilteredJobs(filtered);
   }, [search, jobs]);
 
+  /* =======================
+     Lock Logic
+  ======================= */
+
   const getLockMessage = (job: Job) => {
     if (!user) return null;
+
     const vipStatus = user.vipSubscription?.active;
 
-    // Locked for salary
-    const salaryLock = job.salaryMin > 250 && !vipStatus;
+    const salaryLock = job.salaryMax > 250 && !vipStatus;
 
-    // Locked if user already applied
     const application = userApplications.find((app) => app.jobId === job.id);
-    const applicationLock =
-      application &&
-      ["pending", "accepted", "rejected"].includes(application.status);
 
-    if (applicationLock)
-      return `Already Applied - Status: ${application!.status}`;
+    if (application) return `Already Applied - Status: ${application.status}`;
+
     if (salaryLock) return "VIP Only";
 
     return null;
   };
+
+  /* =======================
+     Render
+  ======================= */
 
   if (!user) return null;
   if (loading) return <p>Loading jobs...</p>;
@@ -162,11 +190,11 @@ export default function WorkerJobsPage() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">Job Listings</h1>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* Search */}
+      <div className="flex flex-col sm:flex-row gap-4">
         <input
           type="text"
-          placeholder="Search jobs..."
+          placeholder="Search jobs or companies..."
           className="border p-3 rounded-xl w-full sm:w-1/3"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -185,6 +213,7 @@ export default function WorkerJobsPage() {
             }}
           />
         ))}
+
         {filteredJobs.length === 0 && (
           <p className="text-gray-500 col-span-full text-center">
             No jobs found.
