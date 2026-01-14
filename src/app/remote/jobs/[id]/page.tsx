@@ -33,7 +33,7 @@ interface Job {
   salaryRange: {
     min: number;
     max: number;
-    currency: string;
+    currency: "USD" | "NGN";
   };
 }
 
@@ -52,6 +52,9 @@ export default function JobDetailsPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  /* ================= HELPER ================= */
+  const formatNumber = (num: number) => num.toLocaleString();
 
   /* ================= AUTH ================= */
   useEffect(() => {
@@ -85,7 +88,13 @@ export default function JobDetailsPage() {
 
   /* ================= VIP LOGIC ================= */
   const isVIP = user.vipSubscription?.active;
-  const isLocked = job.salaryRange.max > 250 && !isVIP;
+  const isLocked =
+    (job.salaryRange.currency === "USD" &&
+      job.salaryRange.max > 250 &&
+      !isVIP) ||
+    (job.salaryRange.currency === "NGN" &&
+      job.salaryRange.max > 200_000 &&
+      !isVIP);
 
   /* ================= CV UPLOAD ================= */
   const handleCvUpload = async (file: File) => {
@@ -127,6 +136,17 @@ export default function JobDetailsPage() {
     }
   };
 
+  /* ================= SALARY DISPLAY ================= */
+  const displaySalary = () => {
+    const { min, max, currency } = job.salaryRange;
+    const formattedMin = formatNumber(min);
+    const formattedMax = formatNumber(max);
+
+    return currency === "NGN"
+      ? `₦${formattedMin} - ₦${formattedMax}`
+      : `$${formattedMin} - $${formattedMax}`;
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       {/* ================= HEADER ================= */}
@@ -143,8 +163,7 @@ export default function JobDetailsPage() {
           </span>
 
           <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
-            {job.salaryRange.currency} {job.salaryRange.min} –{" "}
-            {job.salaryRange.max}
+            {displaySalary()}
           </span>
         </div>
 
@@ -213,7 +232,11 @@ export default function JobDetailsPage() {
           <div className="flex flex-col items-center text-center gap-4">
             <Lock className="w-8 h-8 text-orange-600" />
             <p className="font-medium">
-              Jobs above <strong>$250</strong> are for VIP workers only.
+              Jobs above{" "}
+              <strong>
+                {job.salaryRange.currency === "NGN" ? "₦200,000" : "$250"}
+              </strong>{" "}
+              are for VIP workers only.
             </p>
             <button
               onClick={() => router.push("/payment/remote-vip")}

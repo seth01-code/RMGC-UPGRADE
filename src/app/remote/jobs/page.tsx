@@ -32,9 +32,13 @@ interface JobCardProps {
 }
 
 /* =======================
+   Helper to format numbers
+======================= */
+const formatNumber = (num: number) => num.toLocaleString();
+
+/* =======================
    Job Card Component
 ======================= */
-
 function JobCard({ job, lockMessage, onClick }: JobCardProps) {
   return (
     <div
@@ -61,7 +65,13 @@ function JobCard({ job, lockMessage, onClick }: JobCardProps) {
 
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm font-semibold text-green-700 bg-green-100 px-2 py-1 rounded-full">
-            {job.salary}
+            {job.currency === "NGN"
+              ? `₦${formatNumber(job.salaryMin)} - ₦${formatNumber(
+                  job.salaryMax
+                )}`
+              : `$${formatNumber(job.salaryMin)} - $${formatNumber(
+                  job.salaryMax
+                )}`}
           </span>
           <span className="text-sm font-semibold text-blue-700 bg-blue-100 px-2 py-1 rounded-full">
             {job.remoteType}
@@ -81,7 +91,6 @@ function JobCard({ job, lockMessage, onClick }: JobCardProps) {
 /* =======================
    Worker Jobs Page
 ======================= */
-
 export default function WorkerJobsPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -104,19 +113,24 @@ export default function WorkerJobsPage() {
       try {
         /* Fetch Jobs */
         const jobsRes = await newRequest.get("/jobs/");
-        const fetchedJobs: Job[] = jobsRes.data.map((j: any) => ({
-          id: j._id,
-          title: j.title,
-          organization: j.organizationId?.organization?.name || "Unknown",
-          salary:
-            j.salaryRange?.currency === "NGN"
-              ? `₦${j.salaryRange?.min || 0} - ₦${j.salaryRange?.max || 0}`
-              : `$${j.salaryRange?.min || 0} - $${j.salaryRange?.max || 0}`,
-          salaryMin: j.salaryRange?.min || 0,
-          salaryMax: j.salaryRange?.max || 0,
-          currency: j.salaryRange?.currency || "USD",
-          remoteType: j.type || "Remote",
-        }));
+        const fetchedJobs: Job[] = jobsRes.data.map((j: any) => {
+          const currency = j.salaryRange?.currency || "USD";
+          const min = j.salaryRange?.min || 0;
+          const max = j.salaryRange?.max || 0;
+          return {
+            id: j._id,
+            title: j.title,
+            organization: j.organizationId?.organization?.name || "Unknown",
+            salary:
+              currency === "NGN"
+                ? `₦${formatNumber(min)} - ₦${formatNumber(max)}`
+                : `$${formatNumber(min)} - $${formatNumber(max)}`,
+            salaryMin: min,
+            salaryMax: max,
+            currency,
+            remoteType: j.type || "Remote",
+          };
+        });
 
         const vipStatus = parsedUser.vipSubscription?.active;
 
@@ -155,7 +169,6 @@ export default function WorkerJobsPage() {
   /* =======================
      Search Filter
   ======================= */
-
   useEffect(() => {
     if (!jobs.length) return;
 
@@ -171,7 +184,6 @@ export default function WorkerJobsPage() {
   /* =======================
      Lock Logic
   ======================= */
-
   const getLockMessage = (job: Job) => {
     if (!user) return null;
 
@@ -184,7 +196,6 @@ export default function WorkerJobsPage() {
     const application = userApplications.find((app) => app.jobId === job.id);
 
     if (application) return `Already Applied - Status: ${application.status}`;
-
     if (salaryLock) return "VIP Only";
 
     return null;
@@ -193,7 +204,6 @@ export default function WorkerJobsPage() {
   /* =======================
      Render
   ======================= */
-
   if (!user) return null;
   if (loading) return <p>Loading jobs...</p>;
 

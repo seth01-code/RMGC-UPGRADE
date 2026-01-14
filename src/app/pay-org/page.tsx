@@ -6,43 +6,46 @@ import { CreditCard, ShieldCheck, Info } from "lucide-react";
 import newRequest from "../utils/newRequest";
 import getSubscriptionRoute from "../utils/getSubscriptionRoute";
 
-// FIXED PRICES (VAT INCLUDED)
+// FIXED PRICES
 const FIXED_PRICES: Record<string, string> = {
-  NGN: "₦54,000",
+  NGN: "₦54,000", // base 50k + 4k fee
   USD: "$45",
   GBP: "£35",
   EUR: "€35",
 };
 
+// Breakdown for NGN only
+const NGN_BREAKDOWN = {
+  base: "₦50,000",
+  fee: "₦4,000",
+};
+
 const OrganizationPaymentPage: React.FC = () => {
   const [country, setCountry] = useState<string>("Nigeria");
-  const [currencyCode, setCurrencyCode] = useState<string>("NGN");
-  const [convertedPrice, setConvertedPrice] = useState<string>("₦54,000");
+  const [currency, setCurrency] = useState<string>("NGN");
+  const [priceDisplay, setPriceDisplay] = useState<string>(FIXED_PRICES["NGN"]);
 
   useEffect(() => {
     const detectCurrency = async () => {
       try {
         const ipRes = await fetch("https://ipapi.co/json/");
         const data = await ipRes.json();
-
-        const detectedCurrency = data?.currency || "NGN";
         setCountry(data?.country_name || "Nigeria");
 
-        // We only support these four currencies
+        const detectedCurrency = data?.currency || "NGN";
         const supportedCurrencies = ["NGN", "USD", "GBP", "EUR"];
 
         if (supportedCurrencies.includes(detectedCurrency)) {
-          setCurrencyCode(detectedCurrency);
-          setConvertedPrice(FIXED_PRICES[detectedCurrency]);
+          setCurrency(detectedCurrency);
+          setPriceDisplay(FIXED_PRICES[detectedCurrency]);
         } else {
-          // fallback to NGN
-          setCurrencyCode("NGN");
-          setConvertedPrice(FIXED_PRICES["NGN"]);
+          setCurrency("NGN");
+          setPriceDisplay(FIXED_PRICES["NGN"]);
         }
       } catch (err) {
         console.error("🌍 Currency detection failed", err);
-        setCurrencyCode("NGN");
-        setConvertedPrice(FIXED_PRICES["NGN"]);
+        setCurrency("NGN");
+        setPriceDisplay(FIXED_PRICES["NGN"]);
       }
     };
 
@@ -51,7 +54,7 @@ const OrganizationPaymentPage: React.FC = () => {
 
   const handleProceedPayment = async () => {
     try {
-      const route = getSubscriptionRoute(currencyCode);
+      const route = getSubscriptionRoute(currency);
       const res = await newRequest.post(route);
 
       if (res.data.checkoutLink) {
@@ -92,11 +95,20 @@ const OrganizationPaymentPage: React.FC = () => {
             className="text-center"
           >
             <h2 className="text-5xl font-extrabold text-orange-400 drop-shadow-md">
-              {convertedPrice}
+              {priceDisplay}
             </h2>
-            <p className="text-gray-400 mt-2 text-sm">
-              Fixed price — includes VAT and yearly renewal.
-            </p>
+
+            {currency === "NGN" ? (
+              <p className="text-gray-400 mt-2 text-sm">
+                Base fee: {NGN_BREAKDOWN.base} + Processing fee:{" "}
+                {NGN_BREAKDOWN.fee} <br />
+                Fixed price — includes VAT and yearly renewal.
+              </p>
+            ) : (
+              <p className="text-gray-400 mt-2 text-sm">
+                Fixed price — includes VAT and yearly renewal.
+              </p>
+            )}
           </motion.div>
 
           <div className="flex items-center space-x-2 text-gray-400 text-sm">
@@ -104,7 +116,7 @@ const OrganizationPaymentPage: React.FC = () => {
             <span>Secure recurring billing</span>
           </div>
 
-          {/* Card Safety & Recommendation Notice */}
+          {/* Card Safety & Recommendations */}
           <div className="bg-gray-800/40 border border-gray-700 rounded-xl p-4 mt-4 w-full">
             <div className="flex items-center space-x-2 mb-2">
               <Info className="w-4 h-4 text-orange-400" />
@@ -114,36 +126,25 @@ const OrganizationPaymentPage: React.FC = () => {
             </div>
 
             <ul className="text-xs text-gray-400 space-y-2 leading-relaxed">
+              <li>• Use a card that supports online recurring billing.</li>
+              <li>• Ensure your card is enabled for international payments.</li>
               <li>
-                • Use a **card that supports online recurring billing** (most
-                banks and fintech cards work with Flutterwave).
+                • Make sure your card has sufficient balance for auto-renewal.
               </li>
               <li>
-                • Make sure your card is **enabled for international payments**,
-                especially if you're paying in USD, GBP, or EUR.
+                • Flutterwave uses bank-grade security. RMGC never sees full
+                card details.
               </li>
               <li>
-                • For auto-renewal, ensure your card has **sufficient balance**
-                during the renewal period so your subscription doesn’t pause.
+                • You can cancel auto-renewal anytime, access continues until
+                expiry.
               </li>
               <li>
-                • Flutterwave uses **bank-grade security**, and your full card
-                details are never exposed to RMGC.
-              </li>
-              <li>
-                • You can cancel auto-renewal anytime through your dashboard,
-                and you’ll still keep access until your current plan expires.
-              </li>
-              <li>
-                • Flutterwave may apply a small processing fee depending on your
-                card issuer or currency. This fee is charged by Flutterwave, not
-                RMGC.
+                • Flutterwave may charge a small processing fee (separate from
+                RMGC).
               </li>
             </ul>
           </div>
-
-          {/* Card Info */}
-          {/* (your card info block stays unchanged) */}
 
           <motion.button
             whileHover={{ scale: 1.04 }}

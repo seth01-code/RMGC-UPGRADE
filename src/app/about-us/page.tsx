@@ -79,7 +79,7 @@ const AboutUs: React.FC = () => {
     },
     {
       q: "Who can register on RMGC?",
-      a: "Freelancers, remote workers, and verified organizations looking to hire professionals or showcase their services can all register.",
+      a: "Freelancers, remote workers, and verified organizations looking to hire professionals or showcase their services can all register on RMGC.",
     },
     {
       q: "Is RMGC available outside Nigeria?",
@@ -87,11 +87,19 @@ const AboutUs: React.FC = () => {
     },
     {
       q: "How do I join as a service provider?",
-      a: "Simply sign up on our platform, complete your profile, and showcase your skills or services. Clients can then discover and hire you directly.",
+      a: "To join, freelancers pay a **one-time registration fee of ₦5,000** to complete their profile and start applying for jobs. Remote workers can register for free, but can upgrade to the **VIP tier** for premium access to higher-paying jobs. Verified organizations pay a registration fee to post jobs and access the talent pool.",
     },
     {
-      q: "Does RMGC charge registration fees?",
-      a: "Freelancers can join for free, while organizations pay a registration fee and remote workers can upgrade to a VIP tier for premium job access.",
+      q: "Are there recurring fees or subscription plans?",
+      a: "Freelancers do not have recurring fees beyond the one-time registration. Remote workers can choose a **VIP subscription** for access to high-paying jobs, billed monthly or yearly depending on the plan. Organizations pay a registration fee to post jobs and access premium services.",
+    },
+    {
+      q: "What payment methods are supported?",
+      a: "RMGC supports Paystack and Flutterwave for all transactions, allowing payments in Naira, USD, or other supported currencies.",
+    },
+    {
+      q: "Do I need to verify my account?",
+      a: "Yes. Freelancers and organizations must verify their account using valid identification and contact details to ensure trust and security on the platform.",
     },
   ];
 
