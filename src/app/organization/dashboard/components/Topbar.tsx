@@ -160,7 +160,7 @@ const Topbar: React.FC<TopbarProps> = ({ user, onLogout }) => {
               <div className="w-8 h-8 relative rounded-full overflow-hidden">
                 <Image
                   src={
-                    user.img ||
+                    user.organization.logo||
                     "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
                   }
                   alt="User"

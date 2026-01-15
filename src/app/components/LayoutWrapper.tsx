@@ -54,7 +54,7 @@ export default function LayoutWrapper({
 
       // Admin → block landing page
       if (user.isAdmin && pathname === "/") {
-        router.replace("/admin/dashboard");
+        router.replace("/admin");
       }
 
       // Remote worker → block landing page
