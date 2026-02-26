@@ -127,18 +127,16 @@ function RegisterFreelancer() {
   };
 
   try {
-    // Store registration data temporarily via backend
-    await newRequest.post("/auth/register", userData);
+  // Store registration data temporarily via backend
+  await newRequest.post("/auth/register", userData);
 
-    toast.success("Registration data saved. Please complete payment to continue.");
-    router.push(`/payment/freelancers?email=${user.email}`);
-  } catch (err: any) {
-    toast.error(err.response?.data || "Registration failed");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  toast.success("OTP sent! Please check your email.");
+  router.push(`/verify-otp?email=${encodeURIComponent(user.email)}`);
+} catch (err: any) {
+  toast.error(err?.response?.data?.message || "Registration failed");
+} finally {
+  setLoading(false);
+}
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-100 via-white to-orange-50 px-4 py-10">
