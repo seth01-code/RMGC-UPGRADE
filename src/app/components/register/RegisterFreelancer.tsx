@@ -103,40 +103,41 @@ function RegisterFreelancer() {
   };
 
   const handleSubmit = async (e: any) => {
-  e.preventDefault();
-  setLoading(true);
+    e.preventDefault();
+    setLoading(true);
 
-  let imageUrl = user.profilePicture;
+    let imageUrl = user.profilePicture;
 
-  if (file) {
-    try {
-      const uploadedImage = await upload(file);
-      imageUrl = uploadedImage?.url || "";
-    } catch {
-      toast.error("Error uploading image. Please try again.");
-      setLoading(false);
-      return;
+    if (file) {
+      try {
+        const uploadedImage = await upload(file);
+        imageUrl = uploadedImage?.url || "";
+      } catch {
+        toast.error("Error uploading image. Please try again.");
+        setLoading(false);
+        return;
+      }
     }
-  }
 
-  const userData = {
-    ...user,
-    img: imageUrl,
-    languages,
-    services,
+    const userData = {
+      ...user,
+      img: imageUrl,
+      languages,
+      services,
+    };
+
+    try {
+      // Store registration data temporarily via backend
+      await newRequest.post("/auth/register", userData);
+
+      toast.success("OTP sent! Please check your email.");
+      router.push(`/verify-otp?email=${encodeURIComponent(user.email)}`);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Registration failed");
+    } finally {
+      setLoading(false);
+    }
   };
-
-  try {
-  // Store registration data temporarily via backend
-  await newRequest.post("/auth/register", userData);
-
-  toast.success("OTP sent! Please check your email.");
-  router.push(`/verify-otp?email=${encodeURIComponent(user.email)}`);
-} catch (err: any) {
-  toast.error(err?.response?.data?.message || "Registration failed");
-} finally {
-  setLoading(false);
-}
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-100 via-white to-orange-50 px-4 py-10">
