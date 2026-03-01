@@ -10,7 +10,7 @@ export default function OTPVerification() {
   const searchParams = useSearchParams();
 
   const [otp, setOtp] = useState("");
-  const [timeLeft, setTimeLeft] = useState(600); // 10 minutes
+  const [timeLeft, setTimeLeft] = useState(120); // 2 minutes
   const [otpExpired, setOtpExpired] = useState(false);
   const [timerId, setTimerId] = useState<NodeJS.Timeout | null>(null);
   const [email, setEmail] = useState<string>("");
@@ -44,7 +44,7 @@ export default function OTPVerification() {
   const startTimer = () => {
     if (timerId) clearInterval(timerId);
 
-    setTimeLeft(600);
+    setTimeLeft(120);
     setOtpExpired(false);
 
     const newTimerId = setInterval(() => {
@@ -84,15 +84,12 @@ export default function OTPVerification() {
       toast.success("OTP verified successfully!");
       localStorage.removeItem("email");
 
-      // ✅ Determine user role and tier
       const userRole = response.data?.role;
       const userTier = response.data?.tier;
 
       if (userRole === "remote_worker" && userTier === "vip") {
-        // Redirect VIP remote workers to checkout page (no email in URL)
         router.push("/payment/remote-vip");
       } else if (userRole === "remote_worker" && userTier === "free") {
-        // Redirect free remote workers to terms or dashboard
         router.push("/terms-privacy");
       } else if (userRole === "organization") {
         router.push("/login");
@@ -132,18 +129,23 @@ export default function OTPVerification() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen text-black">
-      <div className="w-[420px] bg-gray-800 shadow-2xl shadow-black rounded-lg p-6 flex flex-col gap-5">
-        <h2 className="text-2xl font-bold text-center text-green-400 tracking-wide">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-white px-4">
+      <div className="w-full max-w-md bg-gray-800 shadow-2xl shadow-black rounded-xl p-8 flex flex-col gap-6">
+        <h2 className="text-3xl font-bold text-center text-green-400 tracking-wide">
           Verify Your Account
         </h2>
 
         <p className="text-gray-300 text-center">
-          Enter the OTP sent to <strong className="text-white">{email}</strong>
+          Enter the OTP sent to{" "}
+          <strong className="text-white">{email}</strong>
         </p>
 
-        <div className="flex justify-center text-lg font-semibold text-gray-400">
-          OTP expires in: <span className="ml-1">{formatTime(timeLeft)}</span>
+        <div
+          className={`flex justify-center text-lg font-semibold ${
+            timeLeft <= 30 ? "text-red-400" : "text-gray-400"
+          }`}
+        >
+          OTP expires in: <span className="ml-2">{formatTime(timeLeft)}</span>
         </div>
 
         <input
@@ -151,20 +153,20 @@ export default function OTPVerification() {
           value={otp}
           onChange={(e) => setOtp(e.target.value)}
           placeholder="Enter OTP"
-          className="p-3 border border-gray-400 bg-gray-700 rounded-md text-center text-lg tracking-widest text-white placeholder-gray-300 focus:ring-2 focus:ring-gray-500"
+          className="p-4 border border-gray-600 bg-gray-700 rounded-lg text-center text-xl tracking-widest text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400 transition"
           maxLength={6}
         />
 
         <button
           type="submit"
           onClick={handleVerifyOTP}
-          className="bg-green-500 hover:bg-green-600 text-gray-900 font-semibold py-2 rounded-md transition duration-300"
+          className="bg-green-500 hover:bg-green-600 text-gray-900 font-bold py-3 rounded-lg transition duration-300 shadow-md hover:shadow-lg"
         >
           Verify OTP
         </button>
 
         {otpExpired && (
-          <div className="text-center mt-3">
+          <div className="text-center mt-4">
             <span className="text-gray-400">Your OTP has expired.</span>
             <button
               onClick={handleResendOTP}
@@ -174,6 +176,10 @@ export default function OTPVerification() {
             </button>
           </div>
         )}
+
+        <p className="text-center text-sm text-gray-500 mt-4">
+          Didn't receive the OTP? Check your spam folder or click resend.
+        </p>
       </div>
     </div>
   );
