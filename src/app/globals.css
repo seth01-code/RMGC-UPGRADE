@@ -3,7 +3,7 @@
 /* Root Variables */
 :root {
   --background: #ffffff;
-  --foreground: #fdfdfd;
+  --foreground: #000000;
 
   /* Primary Fonts */
   --font-geist-sans: "Geist Sans", Arial, Helvetica, sans-serif;
