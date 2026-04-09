@@ -24,12 +24,12 @@
 }
 
 /* Dark Mode */
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
   :root {
     --background: #ececec;
     --foreground: #2e2c2c;
   }
-}
+} */
 
 /* Global Body Styling */
 /* Global Body Styling */
