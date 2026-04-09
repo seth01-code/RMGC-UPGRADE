@@ -225,7 +225,7 @@ function RegisterFreelancer() {
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter password"
                     onChange={handleChange}
-                    className="p-3 border rounded-lg w-full pr-12 focus:ring-2 focus:ring-orange-400 focus:outline-none"
+                    className="mt-1 p-3 border rounded-lg w-full text-black placeholder-gray-500 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
                   />
                   <button
                     type="button"
@@ -309,7 +309,7 @@ function RegisterFreelancer() {
                 name="desc"
                 placeholder="Write a short bio about yourself"
                 onChange={handleChange}
-                className="mt-1 p-3 border rounded-lg w-full h-28 focus:ring-2 focus:ring-orange-400 focus:outline-none"
+                className="mt-1 p-3 border rounded-lg w-full text-black placeholder-gray-500 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
               />
             </div>
           </section>
@@ -355,7 +355,7 @@ const InputField = ({ label, name, type = "text", onChange }: any) => (
       name={name}
       type={type}
       onChange={onChange}
-      className="mt-1 p-3 border rounded-lg w-full focus:ring-2 focus:ring-orange-400 focus:outline-none transition-all"
+      className="mt-1 p-3 border rounded-lg w-full text-black placeholder-gray-500 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
     />
   </div>
 );
@@ -367,7 +367,7 @@ const TagInput = ({ label, tags, onChange, color }: any) => (
       type="text"
       placeholder="Type and separate with commas"
       onChange={onChange}
-      className="mt-1 p-3 border rounded-lg w-full focus:ring-2 focus:ring-orange-400 focus:outline-none"
+      className="mt-1 p-3 border rounded-lg w-full text-black placeholder-gray-500 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
     />
     <div className="flex flex-wrap gap-2 mt-2">
       {tags.map((tag: string, i: number) => (

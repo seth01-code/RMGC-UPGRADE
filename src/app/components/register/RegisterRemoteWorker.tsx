@@ -268,7 +268,7 @@ function RegisterRemoteWorker() {
                     type={showPassword ? "text" : "password"}
                     placeholder="Create a password"
                     onChange={handleChange}
-                    className="p-3 border rounded-lg w-full pr-10 text-sm sm:text-base focus:ring-2 focus:ring-orange-400"
+                    className="mt-1 p-3 border rounded-lg w-full text-black placeholder-gray-500 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
                   />
                   <button
                     type="button"
@@ -333,7 +333,7 @@ function RegisterRemoteWorker() {
                 name="desc"
                 placeholder="Tell us about your experience..."
                 onChange={handleChange}
-                className="mt-1 p-3 border rounded-lg w-full h-24 sm:h-28 text-sm sm:text-base focus:ring-2 focus:ring-orange-400"
+                className="mt-1 p-3 border rounded-lg w-full text-black placeholder-gray-500 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
               />
             </div>
           </div>
@@ -416,7 +416,7 @@ const InputField = ({
       type={type}
       placeholder={placeholder}
       onChange={onChange}
-      className="mt-1 p-3 border rounded-lg w-full text-sm sm:text-base focus:ring-2 focus:ring-orange-400"
+      className="mt-1 p-3 border rounded-lg w-full text-black placeholder-gray-500 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
     />
   </div>
 );
