@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import newRequest from "../utils/newRequest";
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -54,6 +55,7 @@ interface AdminRevenueResponse {
 const usersPerGroup = 10;
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const currentUser =
     typeof window !== "undefined"
       ? JSON.parse(localStorage.getItem("currentUser") || "{}")
@@ -482,6 +484,12 @@ export default function AdminDashboard() {
                       Price: {currencySymbol}{" "}
                       {convertPrice(gig.price).toLocaleString()}
                     </p>
+                    <button
+                    onClick={() => router.push(`/gigdetails/${gig._id}`)}
+                    className="text-green-600 hover:text-green-700 mt-2 font-medium transition"
+                  >
+                    View Details →
+                  </button>
                   </div>
                 );
               })}
