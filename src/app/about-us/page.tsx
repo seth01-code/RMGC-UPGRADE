@@ -248,14 +248,16 @@ const AboutUs: React.FC = () => {
               transition={{ duration: 0.6, delay: i * 0.2 }}
               className="bg-gradient-to-br from-white to-gray-100 rounded-3xl shadow-xl p-8 text-center border border-gray-200 hover:-translate-y-2 transition-transform"
             >
-              <div className="relative w-44 h-44 mx-auto mb-6">
-                <Image
-                  src={leader.img}
-                  alt={leader.name}
-                  fill
-                  className="rounded-full object-cover border-4 border-orange-400 shadow-lg"
-                />
-              </div>
+             <div className="flex justify-center">
+  <div className="relative w-44 h-44 mb-6">
+    <Image
+      src={leader.img}
+      alt={leader.name}
+      fill
+      className="rounded-full object-cover border-4 border-orange-400 shadow-lg"
+    />
+  </div>
+</div>
               <h3 className="text-xl font-semibold text-gray-800">
                 {leader.name}
               </h3>
