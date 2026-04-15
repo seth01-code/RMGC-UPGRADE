@@ -174,10 +174,11 @@ const AdminMessages: React.FC = () => {
                         <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-300 shadow-sm">
                           <Image
                             src={
-                              client.img ||
-                              "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
+                              client.img && client.img.trim() !== ""
+                                ? client.img
+                                : "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
                             }
-                            alt={client.username}
+                            alt={client.username || "User avatar"}
                             width={48}
                             height={48}
                             className="object-cover w-full h-full"
@@ -195,10 +196,11 @@ const AdminMessages: React.FC = () => {
                         <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-300 shadow-sm">
                           <Image
                             src={
-                              provider.img ||
-                              "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
+                              provider?.img && provider.img.trim() !== ""
+                                ? provider.img
+                                : "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
                             }
-                            alt={provider.username}
+                            alt={provider?.username || "User avatar"}
                             width={48}
                             height={48}
                             className="object-cover w-full h-full"
