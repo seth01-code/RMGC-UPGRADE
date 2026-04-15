@@ -13,7 +13,7 @@ import {
 
 import aboutBg from "../../assets/images/aboutUs.jpg";
 import founderImg from "../../assets/images/mi.jpg";
-import ctoImg from "../../assets/images/12.jpg";
+import ctoImg from "../../assets/images/me.png";
 import ccoImg from "../../assets/images/Ukachi.jpg";
 
 interface Particle {
@@ -46,7 +46,7 @@ const AboutUs: React.FC = () => {
   const leaders = [
     { name: "Miracle Ikhielea", role: "Founder & CEO", img: founderImg },
     { name: "Seth Ikhielea", role: "CTO & Personal Assistant", img: ctoImg },
-    { name: "David Ukachi", role: "Chief Commercial Officer", img: ccoImg },
+    { name: "David Ukachi", role: "Chief Communication Officer", img: ccoImg },
   ];
 
   const values = [
