@@ -3,107 +3,193 @@
 
 import { motion } from "framer-motion";
 import { Typewriter } from "react-simple-typewriter";
-import { Orbitron } from "next/font/google";
 
-const orbitron = Orbitron({
-  subsets: ["latin"],
-  variable: "--font-orbitron",
-  weight: ["600", "700"],
-});
-
-const ringVariants = {
-  rotate: {
-    rotate: [0, 360],
-    transition: { repeat: Infinity, duration: 2, ease: "linear" },
-  },
-};
-
-const dotVariants = {
-  bounce: {
-    y: [0, -20, 0],
-    transition: { repeat: Infinity, duration: 0.6, ease: "easeInOut" },
-  },
-};
-
-const particleVariants = {
-  float: (i: number) => ({
-    y: [0, -10, 0],
-    x: [0, i % 2 === 0 ? 5 : -5, 0],
-    opacity: [0.6, 1, 0.6],
-    transition: { repeat: Infinity, duration: 1 + i * 0.2, ease: "easeInOut" },
-  }),
-};
+const OR = "#FF6B1A";
+const ORL = "#FF8C47";
 
 const GlobalPreloader = () => {
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white overflow-hidden">
-      {/* Neon Spinning Rings */}
-      <div className="relative w-40 h-40 mb-8">
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#0A0A0A",
+        fontFamily: "'Inter', -apple-system, sans-serif",
+        overflow: "hidden",
+      }}
+    >
+      {/* Ambient glow */}
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -60%)",
+          width: "500px",
+          height: "500px",
+          borderRadius: "50%",
+          background: `radial-gradient(circle, ${OR}18 0%, transparent 65%)`,
+          pointerEvents: "none",
+        }}
+      />
+
+      {/* RMGC watermark */}
+      <div
+        style={{
+          position: "absolute",
+          fontSize: "clamp(80px, 20vw, 200px)",
+          fontWeight: 900,
+          color: "rgba(255,107,26,0.04)",
+          letterSpacing: "-0.04em",
+          userSelect: "none",
+          pointerEvents: "none",
+          whiteSpace: "nowrap",
+        }}
+      >
+        RMGC
+      </div>
+
+      {/* Logo mark — concentric arcs */}
+      <div style={{ position: "relative", width: "96px", height: "96px", marginBottom: "40px" }}>
         {[0, 1, 2].map((i) => (
           <motion.div
             key={i}
-            className={`absolute top-0 left-0 w-full h-full rounded-full border-[3px]`}
             style={{
-              borderColor: `rgba(255,165,0,${0.4 + i * 0.2})`,
-              boxShadow: `0 0 ${8 + i * 4}px rgba(255,165,0,0.7), 0 0 ${
-                16 + i * 8
-              }px rgba(255,165,0,0.3)`,
+              position: "absolute",
+              inset: `${i * 12}px`,
+              borderRadius: "50%",
+              border: `2px solid transparent`,
+              borderTopColor: i === 0 ? OR : i === 1 ? ORL : `${OR}60`,
+              borderRightColor: i === 0 ? `${OR}40` : "transparent",
             }}
-            variants={ringVariants}
-            animate="rotate"
-            style={{ transformOrigin: "50% 50%" }}
-            transition={{ ...ringVariants.rotate.transition, duration: 2 + i }}
+            animate={{ rotate: 360 }}
+            transition={{
+              repeat: Infinity,
+              duration: 1.2 + i * 0.4,
+              ease: "linear",
+              direction: i % 2 === 0 ? "normal" : "reverse",
+            } as any}
           />
         ))}
-      </div>
 
-      {/* Bouncing Neon Dots */}
-      <div className="flex space-x-4 mb-6 relative z-10">
-        {[0, 1, 2, 3].map((i) => (
-          <motion.div
-            key={i}
-            className="w-5 h-5 bg-orange-500 rounded-full shadow-[0_0_8px_rgba(255,165,0,0.8)]"
-            variants={dotVariants}
-            animate="bounce"
-            transition={{ ...dotVariants.bounce.transition, delay: i * 0.1 }}
-          />
-        ))}
-      </div>
-
-      {/* Floating Neon Particles */}
-      {[...Array(6)].map((_, i) => (
+        {/* Center dot */}
         <motion.div
-          key={i}
-          custom={i}
-          className="absolute w-2 h-2 bg-orange-400 rounded-full shadow-[0_0_6px_rgba(255,165,0,0.9)]"
-          variants={particleVariants}
-          animate="float"
           style={{
-            top: `${10 + i * 12}%`,
-            left: `${20 + i * 10}%`,
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "12px",
+            height: "12px",
+            borderRadius: "50%",
+            background: OR,
+            boxShadow: `0 0 12px ${OR}`,
           }}
+          animate={{ scale: [1, 1.4, 1], opacity: [0.8, 1, 0.8] }}
+          transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
         />
-      ))}
+      </div>
 
-      {/* Loading Text */}
-      <motion.div
-        className={`${orbitron.variable} text-3xl font-bold mb-4 bg-gradient-to-r from-orange-500 via-orange-400 to-gray-200 bg-clip-text text-transparent tracking-wider`}
-        animate={{ scale: [1, 1.15, 1] }}
-        transition={{ duration: 0.8, repeat: Infinity }}
+      {/* Typewriter heading */}
+      <div
+        style={{
+          fontSize: "clamp(22px, 4vw, 32px)",
+          fontWeight: 800,
+          letterSpacing: "-0.02em",
+          color: "#FFFFFF",
+          marginBottom: "10px",
+          minHeight: "44px",
+        }}
       >
         <Typewriter
-          words={["Loading RMGC..."]}
+          words={["Renewed Minds", "Global Consult", "RMGC"]}
           loop={false}
           cursor
           cursorStyle="|"
-          typeSpeed={90}
-          deleteSpeed={50}
-          delaySpeed={1500}
+          typeSpeed={75}
+          deleteSpeed={40}
+          delaySpeed={900}
         />
-      </motion.div>
+      </div>
 
-      {/* Progress Bar-like Pulse */}
-      <div className="absolute bottom-12 w-40 h-1 bg-orange-500 rounded-full animate-pulse-fast shadow-md"></div>
+      <p
+        style={{
+          fontSize: "12px",
+          fontWeight: 600,
+          letterSpacing: "0.2em",
+          textTransform: "uppercase",
+          color: OR,
+          marginBottom: "48px",
+        }}
+      >
+        Loading platform…
+      </p>
+
+      {/* Progress track */}
+      <div
+        style={{
+          width: "160px",
+          height: "2px",
+          background: "#1A1A1A",
+          borderRadius: "2px",
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
+        <motion.div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            height: "100%",
+            width: "40%",
+            background: `linear-gradient(90deg, transparent, ${OR}, ${ORL}, transparent)`,
+            borderRadius: "2px",
+          }}
+          animate={{ x: ["-100%", "300%"] }}
+          transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
+        />
+      </div>
+
+      {/* Floating particles */}
+      {[
+        { top: "15%", left: "12%", size: 4, dur: 2.4 },
+        { top: "25%", left: "82%", size: 3, dur: 1.8 },
+        { top: "70%", left: "8%",  size: 5, dur: 3.0 },
+        { top: "75%", left: "88%", size: 3, dur: 2.1 },
+        { top: "45%", left: "6%",  size: 4, dur: 2.7 },
+        { top: "55%", left: "91%", size: 3, dur: 1.9 },
+      ].map((p, i) => (
+        <motion.div
+          key={i}
+          style={{
+            position: "absolute",
+            top: p.top,
+            left: p.left,
+            width: `${p.size}px`,
+            height: `${p.size}px`,
+            borderRadius: "50%",
+            background: OR,
+            boxShadow: `0 0 8px ${OR}`,
+            opacity: 0.5,
+          }}
+          animate={{
+            y: [0, -12, 0],
+            opacity: [0.3, 0.8, 0.3],
+          }}
+          transition={{
+            repeat: Infinity,
+            duration: p.dur,
+            ease: "easeInOut",
+            delay: i * 0.3,
+          }}
+        />
+      ))}
     </div>
   );
 };

@@ -12,15 +12,11 @@ import {
 } from "framer-motion";
 import { useRef } from "react";
 
-// Assets
 import CheckIcon from "../../assets/images/check.png";
-
-// Components
 import Featured from "../components/Featured/Featured";
 import Slide from "../components/Slide/Slide";
 import Slider from "../components/Slide/Slider";
 
-// Counter Component with Scroll Trigger
 const Counter = ({
   target,
   isVisible,
@@ -56,251 +52,269 @@ const HomePage: React.FC = () => {
     { label: "Countries Reached", value: 6 },
   ];
 
-  const FloatingCircle = ({
-    size,
-    color,
-    duration,
-    delay,
-    top,
-    left,
-  }: {
-    size: number;
-    color: string;
-    duration: number;
-    delay: number;
-    top: string;
-    left: string;
-  }) => (
-    <motion.div
-      className="absolute rounded-full blur-[60px] opacity-70"
-      style={{
-        width: size,
-        height: size,
-        background: color,
-        top,
-        left,
-        boxShadow: `0 0 80px ${color}`,
-      }}
-      animate={{
-        x: [0, 100, -80, 120, -60, 0],
-        y: [0, -100, 60, -120, 80, 0],
-        rotate: [0, 45, 90, 135, 180, 225, 270, 360],
-        scale: [1, 1.1, 0.95, 1.05, 1],
-        opacity: [0.7, 1, 0.85, 1],
-      }}
-      transition={{
-        duration,
-        repeat: Infinity,
-        repeatType: "mirror",
-        delay,
-        ease: "easeInOut",
-      }}
-    />
-  );
-
-  const circles = [
-    {
-      size: 260,
-      color: "rgba(255,140,0,0.45)",
-      duration: 10,
-      delay: 0,
-      top: "10%",
-      left: "15%",
-    },
-    {
-      size: 200,
-      color: "rgba(0,200,255,0.35)",
-      duration: 11,
-      delay: 1,
-      top: "25%",
-      left: "70%",
-    },
-    {
-      size: 280,
-      color: "rgba(255,100,200,0.35)",
-      duration: 9,
-      delay: 1.5,
-      top: "55%",
-      left: "40%",
-    },
-    {
-      size: 220,
-      color: "rgba(255,255,255,0.25)",
-      duration: 12,
-      delay: 2,
-      top: "70%",
-      left: "10%",
-    },
-    {
-      size: 240,
-      color: "rgba(0,255,200,0.3)",
-      duration: 10,
-      delay: 2.5,
-      top: "80%",
-      left: "55%",
-    },
-    {
-      size: 180,
-      color: "rgba(255,200,0,0.35)",
-      duration: 9,
-      delay: 3,
-      top: "15%",
-      left: "85%",
-    },
-    {
-      size: 200,
-      color: "rgba(255,255,255,0.2)",
-      duration: 13,
-      delay: 3.5,
-      top: "60%",
-      left: "75%",
-    },
-    {
-      size: 240,
-      color: "rgba(255,0,150,0.3)",
-      duration: 10,
-      delay: 4,
-      top: "40%",
-      left: "25%",
-    },
-  ];
-
-  // Ref for stats section
   const statsRef = useRef(null);
   const isInView = useInView(statsRef, { once: true, margin: "-100px" });
 
   return (
-    <div className="relative bg-gray-100 w-full overflow-hidden">
-      {/* Featured Section */}
+    <div className="relative bg-white w-full overflow-hidden">
+
+      {/* ── Featured ── */}
       <Featured />
 
-      {/* Slider Section */}
+      {/* ── Slider ── */}
       <Slider />
 
-      {/* Hero Section */}
-      <section className="relative py-16 md:py-24 lg:py-32 text-white bg-gray-900 rounded-t-[120px] overflow-hidden">
-        <Image
-          src="/explore.jpg"
-          alt="Hero Background"
-          fill
-          className="absolute top-0 left-0 w-full h-full object-cover rounded-t-[120px]"
-        />
-        <div className="absolute inset-0 bg-black/60 rounded-t-[120px]" />
+      {/* ── Hero ── */}
+<section className="relative overflow-hidden bg-[#080808]">
+  {/* Background image — very subtle */}
+  <Image
+    src="/explore.jpg"
+    alt=""
+    fill
+    className="absolute inset-0 object-cover opacity-[0.06]"
+    priority
+  />
 
-        {/* Floating Circles */}
-        <div className="absolute inset-0 bottom-[-150px] overflow-visible z-[2] pointer-events-none">
-          {circles.map((circle, index) => (
-            <FloatingCircle key={index} {...circle} />
-          ))}
-        </div>
+  {/* Grid texture overlay */}
+  <div
+    className="absolute inset-0 pointer-events-none opacity-[0.03]"
+    style={{
+      backgroundImage: `linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)`,
+      backgroundSize: "60px 60px",
+    }}
+  />
 
-        <div className="relative container mx-auto max-w-screen-xl px-6 md:px-12 flex flex-col-reverse md:flex-row items-center gap-12">
-          <div className="flex-1 text-center md:text-left space-y-6">
-            <motion.h1
-              className="text-3xl md:text-5xl font-bold"
-              initial={{ opacity: 0, y: -30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.2 }}
-            >
-              Renewed Minds Global Consult
-            </motion.h1>
+  {/* Orange glow — bottom left origin */}
+  <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full bg-orange-500/10 blur-[140px] pointer-events-none" />
+  {/* Orange glow — top right */}
+  <div className="absolute top-0 right-0 w-[300px] h-[300px] rounded-full bg-orange-500/8 blur-[100px] pointer-events-none" />
 
-            <motion.h2
-              className="text-xl md:text-3xl font-semibold mt-2 text-gray-100"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.2, delay: 0.3 }}
-            >
-              Connecting organizations, freelancers, and remote talent worldwide
-            </motion.h2>
+  {/* Top border */}
+  <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-500/50 to-transparent" />
 
-            <div className="mt-6 space-y-3">
-              {features.map((feature, index) => (
-                <motion.div
-                  key={index}
-                  className="flex items-center justify-center md:justify-start gap-2 text-gray-300 text-sm md:text-base"
-                  initial={{ x: -200, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{
-                    duration: 0.8,
-                    delay: 0.5 + index * 0.3,
-                    ease: "easeOut",
-                  }}
-                >
-                  <Image src={CheckIcon} alt="Check" width={20} height={20} />
-                  <span>{feature}</span>
-                </motion.div>
-              ))}
-            </div>
+  <div className="relative z-10 container mx-auto max-w-screen-xl px-6 md:px-12">
 
-            <Link href="/about-us">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="inline-block mt-6 bg-orange-600 hover:bg-orange-500 text-white py-3 px-8 rounded-lg text-lg font-semibold shadow-lg transition-transform"
-              >
-                Explore RMGC
-              </motion.button>
-            </Link>
-          </div>
+    {/* ── Top bar ── */}
+    <div className="flex items-center justify-between py-8 border-b border-[#141414]">
+      <div className="flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+        <span className="text-[11px] tracking-widest text-[#444] uppercase font-semibold">
+          Renewed Minds Global Consult
+        </span>
+      </div>
+      <div className="hidden md:flex items-center gap-6">
+        {["Freelancers", "Organizations", "Remote Work"].map((tag) => (
+          <span key={tag} className="text-[11px] text-[#333] tracking-wide">
+            {tag}
+          </span>
+        ))}
+      </div>
+    </div>
 
-          <motion.div
-            className="flex-1 flex justify-center md:justify-end"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1 }}
+    {/* ── Main grid ── */}
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-0 min-h-[520px]">
+
+      {/* Left — headline block */}
+      <div className="flex flex-col justify-center py-16 lg:py-20 lg:pr-16 lg:border-r lg:border-[#141414] space-y-8">
+
+        {/* Overline tag */}
+        <motion.div
+          className="flex items-center gap-3"
+          initial={{ opacity: 0, x: -16 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="h-px w-8 bg-orange-500" />
+          <span className="text-[11px] font-bold tracking-[0.18em] text-orange-500 uppercase">
+            Global Talent Platform
+          </span>
+        </motion.div>
+
+        {/* Headline */}
+        <motion.h1
+          className="text-[42px] md:text-[58px] lg:text-[64px] font-extrabold leading-[1.05] tracking-tight"
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.1 }}
+        >
+          <span className="text-white">Connecting</span>
+          <br />
+          <span className="text-white">talent,</span>
+          <br />
+          <span
+            className="text-orange-500"
+            style={{
+              textShadow: "0 0 60px rgba(249,115,22,0.3)",
+            }}
           >
-            <Image
-              src="https://cdni.iconscout.com/illustration/premium/thumb/little-people-moving-at-huge-monitor-with-graphs-illustration-download-in-svg-png-gif-file-formats--business-character-collaboration-colleague-network-communication-illustrations-2264299.png"
-              alt="Business Illustration"
-              width={600}
-              height={400}
-              className="w-full max-w-md md:max-w-lg rounded-lg shadow-2xl"
-            />
-          </motion.div>
-        </div>
-      </section>
+            globally.
+          </span>
+        </motion.h1>
 
-      {/* Stats Section */}
+        {/* Sub */}
+        <motion.p
+          className="text-[15px] text-[#666] max-w-sm leading-relaxed"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.7, delay: 0.3 }}
+        >
+          Freelancers, organizations, and remote talent — all on one
+          trusted, secure platform.
+        </motion.p>
+
+        {/* CTAs */}
+        <motion.div
+          className="flex items-center gap-4 flex-wrap"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+        >
+          <Link href="/about-us">
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className="bg-orange-500 hover:bg-orange-600 text-white text-[13px] font-bold py-3 px-7 rounded-xl transition-colors"
+            >
+              Explore RMGC →
+            </motion.button>
+          </Link>
+          <Link href="/allgigs">
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className="text-[13px] font-semibold text-[#555] hover:text-white border border-[#1e1e1e] hover:border-[#333] py-3 px-7 rounded-xl transition-all"
+            >
+              Browse gigs
+            </motion.button>
+          </Link>
+        </motion.div>
+
+        {/* Trust bar */}
+        <motion.div
+          className="flex items-center gap-5 pt-2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.7 }}
+        >
+          {[
+            { value: "350+", label: "Freelancers" },
+            { value: "480+", label: "Projects" },
+            { value: "6", label: "Countries" },
+          ].map((item, i) => (
+            <React.Fragment key={item.label}>
+              {i > 0 && <span className="w-px h-6 bg-[#1e1e1e]" />}
+              <div>
+                <p className="text-[15px] font-bold text-white">{item.value}</p>
+                <p className="text-[10px] text-[#444] tracking-wide uppercase">{item.label}</p>
+              </div>
+            </React.Fragment>
+          ))}
+        </motion.div>
+      </div>
+
+      {/* Right — feature list panel */}
+      <motion.div
+        className="hidden lg:flex flex-col justify-center py-16 pl-10 space-y-1"
+        initial={{ opacity: 0, x: 24 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.7, delay: 0.4 }}
+      >
+        <p className="text-[10px] tracking-[0.16em] text-[#333] uppercase font-semibold mb-5">
+          What we offer
+        </p>
+        {features.map((feature, index) => (
+          <motion.div
+            key={index}
+            className="group flex items-start gap-3 p-4 rounded-xl border border-transparent hover:border-[#1e1e1e] hover:bg-[#0e0e0e] transition-all duration-200 cursor-default"
+            initial={{ opacity: 0, x: 16 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.55 + index * 0.1 }}
+          >
+            <span className="mt-0.5 w-5 h-5 rounded-lg bg-orange-500/10 border border-orange-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-orange-500/20 transition-colors">
+              <Image src={CheckIcon} alt="" width={10} height={10} />
+            </span>
+            <span className="text-[13px] text-[#555] group-hover:text-[#999] transition-colors leading-snug">
+              {feature}
+            </span>
+          </motion.div>
+        ))}
+      </motion.div>
+    </div>
+
+    {/* ── Bottom stat strip ──
+    <div className="border-t border-[#141414] py-6 grid grid-cols-2 md:grid-cols-4 gap-0">
+      {stats.map((stat, i) => (
+        <div
+          key={i}
+          className={`flex flex-col px-6 py-2 ${
+            i < stats.length - 1 ? "border-r border-[#141414]" : ""
+          }`}
+        >
+          <span className="text-[10px] tracking-widest text-[#333] uppercase font-semibold mb-1">
+            {stat.label}
+          </span>
+          <span className="text-[22px] font-extrabold text-white">
+            {stat.value}
+            <span className="text-orange-500 text-base ml-0.5">+</span>
+          </span>
+        </div>
+      ))}
+    </div> */}
+  </div>
+</section>
+
+      {/* ── Stats ── */}
       <section
         ref={statsRef}
-        className="relative bg-gradient-to-b from-orange-50 to-white py-20 overflow-hidden"
+        className="bg-white border-t border-[#f0f0f0] py-20"
       >
-        <div className="container mx-auto px-6 md:px-12 text-center relative z-10">
-          <motion.h2
-            className="text-3xl md:text-4xl font-bold text-gray-900 mb-12"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            Growing Steadily, Impacting Globally
-          </motion.h2>
+        <div className="container mx-auto px-6 md:px-12 max-w-screen-xl">
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <p className="text-[11px] font-semibold tracking-widest text-orange-500 uppercase mb-2">
+              By the numbers
+            </p>
+            <motion.h2
+              className="text-2xl md:text-3xl font-bold text-[#111]"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7 }}
+            >
+              Growing steadily, impacting globally
+            </motion.h2>
+          </div>
+
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             {stats.map((stat, index) => (
               <motion.div
                 key={index}
-                className="p-8 bg-white/80 backdrop-blur-sm border border-orange-200 rounded-2xl shadow-lg hover:shadow-2xl transition-transform transform hover:-translate-y-2"
-                initial={{ opacity: 0, y: 40 }}
+                className="group relative bg-white border border-[#f0f0f0] hover:border-orange-200 rounded-2xl p-6 md:p-8 transition-all duration-300 hover:-translate-y-1"
+                initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.2 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
               >
-                <h3 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-orange-600 to-amber-400 bg-clip-text text-transparent flex items-baseline justify-center md:justify-start">
-                  <Counter target={stat.value} isVisible={isInView} />
-                  <span className="ml-1 text-orange-500">+</span>
-                </h3>
-                <p className="mt-3 text-gray-700 font-semibold text-base md:text-lg">
+                {/* Orange left accent */}
+                <div className="absolute left-0 top-6 bottom-6 w-[3px] rounded-r-full bg-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                <p className="text-[11px] font-semibold tracking-widest text-orange-500 uppercase mb-3">
                   {stat.label}
                 </p>
+                <h3 className="text-4xl md:text-5xl font-extrabold text-[#111] flex items-baseline gap-0.5">
+                  <Counter target={stat.value} isVisible={isInView} />
+                  <span className="text-orange-500 text-3xl">+</span>
+                </h3>
               </motion.div>
             ))}
           </div>
 
+          {/* Tagline */}
           <motion.p
-            className="mt-12 text-gray-600 max-w-2xl mx-auto text-lg"
+            className="mt-12 text-center text-[14px] text-[#999] max-w-xl mx-auto leading-relaxed"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
-            transition={{ duration: 1.2, delay: 0.3 }}
+            transition={{ duration: 1, delay: 0.4 }}
           >
             RMGC is building a trusted platform where freelancers and
             organizations thrive together — one successful project at a time.
@@ -308,6 +322,7 @@ const HomePage: React.FC = () => {
         </div>
       </section>
 
+      {/* ── Slide ── */}
       <Slide />
     </div>
   );

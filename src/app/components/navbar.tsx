@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "react-i18next";
@@ -10,22 +10,17 @@ import { MdOutlineAdd, MdAdminPanelSettings } from "react-icons/md";
 import { HiOutlineShoppingCart } from "react-icons/hi";
 import { FaTasks } from "react-icons/fa";
 import { LuLayoutDashboard } from "react-icons/lu";
+import { HiChevronDown } from "react-icons/hi";
 import Image from "next/image";
 import CategoriesBar from "./CategoriesBar";
 import Announcements from "./Announcement";
-import { Orbitron, Poppins } from "next/font/google";
-import { motion } from "framer-motion";
+import { Orbitron } from "next/font/google";
+import { motion, AnimatePresence } from "framer-motion";
 
 const orbitron = Orbitron({
   subsets: ["latin"],
   weight: ["700"],
   variable: "--font-orbitron",
-});
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "600"],
-  variable: "--font-poppins",
 });
 
 interface User {
@@ -38,237 +33,209 @@ interface User {
 const Navbar: React.FC = () => {
   const pathname = usePathname();
   const { t } = useTranslation();
-  const [active, setActive] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const isHome = pathname === "/";
+  const isDark = isHome && !scrolled;
 
   useEffect(() => {
-    const handleScroll = () => setActive(window.scrollY > 0);
+    const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
-    const storedUser = JSON.parse(
-      localStorage.getItem("currentUser") || "null"
-    );
+    const storedUser = JSON.parse(localStorage.getItem("currentUser") || "null");
     setCurrentUser(storedUser);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("currentUser");
     setCurrentUser(null);
+    setProfileOpen(false);
   };
 
   return (
     <>
       <Announcements />
       <nav
-        className={`sticky top-0 z-50 transition-all duration-500 ${
-          active || pathname !== "/"
-            ? "bg-gradient-to-r from-orange-100 to-white text-black shadow-md"
-            : "bg-gradient-to-r from-black to-gray-800 text-white"
+        className={`sticky top-0 z-50 transition-all duration-300 ${
+          isDark
+            ? "bg-[#080808] border-b border-[#141414]"
+            : "bg-white border-b border-[#f0f0f0]"
         }`}
       >
-        <div className="container mx-auto flex justify-between items-center py-3 sm:py-4 px-4 sm:px-6 md:px-12 max-w-[1400px]">
-          {/* Logo */}
+        <div className="mx-auto flex items-center justify-between px-6 md:px-10 max-w-[1400px] h-16">
+
+          {/* ── Logo ── */}
           <motion.div
-            whileHover={{ scale: 1.05 }}
-            transition={{ type: "spring", stiffness: 200 }}
-            className={`text-2xl sm:text-3xl font-bold tracking-wide select-none ${orbitron.variable} ${poppins.variable}`}
+            whileHover={{ scale: 1.03 }}
+            transition={{ type: "spring", stiffness: 300 }}
           >
             <Link
               href="/"
-              className="relative inline-block font-[var(--font-orbitron)]"
+              className={`font-[var(--font-orbitron)] text-[22px] font-bold tracking-wide select-none ${orbitron.variable}`}
             >
-              <span className="bg-gradient-to-r from-orange-500 via-amber-400 to-gray-300 bg-clip-text text-transparent drop-shadow-sm">
-                RM
-              </span>
-              <span
-                className={`font-[var(--font-poppins)] font-semibold transition-colors duration-500 ${
-                  active ? "text-black" : "text-gray-300"
-                }`}
-              >
-                GC
-              </span>
+              <span className="text-orange-500">RM</span>
+              <span className={isDark ? "text-white" : "text-[#111]"}>GC</span>
               <motion.span
-                className="absolute -right-3 top-0 text-orange-500 text-3xl"
+                className="text-orange-500 ml-0.5"
                 animate={{ y: [0, -2, 0] }}
-                transition={{
-                  repeat: Infinity,
-                  duration: 1.5,
-                  ease: "easeInOut",
-                }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                style={{ display: "inline-block" }}
               >
                 .
               </motion.span>
             </Link>
           </motion.div>
 
-          {/* Navigation */}
-          <div className="flex items-center gap-3 sm:gap-4 md:gap-6 font-medium text-sm sm:text-base">
+          {/* ── Right side ── */}
+          <div className="flex items-center gap-4">
+
+            {/* Admin icon */}
             {currentUser?.isAdmin && (
               <Link
                 href="/admin"
-                className="text-xl sm:text-2xl hover:text-orange-500 transition-colors"
+                className={`text-xl transition-colors ${
+                  isDark ? "text-[#444] hover:text-orange-500" : "text-[#bbb] hover:text-orange-500"
+                }`}
+                title="Admin panel"
               >
                 <MdAdminPanelSettings />
               </Link>
             )}
 
+            {/* Seller dashboard icon */}
             {currentUser?.isSeller && (
               <Link
                 href="/seller"
-                className="text-xl sm:text-2xl hover:text-orange-500 transition-colors"
+                className={`text-xl transition-colors ${
+                  isDark ? "text-[#444] hover:text-orange-500" : "text-[#bbb] hover:text-orange-500"
+                }`}
+                title="Seller dashboard"
               >
                 <LuLayoutDashboard />
               </Link>
             )}
 
             {currentUser ? (
-              <div
-                className="relative cursor-pointer"
-                onClick={() => setProfileOpen(!profileOpen)}
-              >
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 relative rounded-full overflow-hidden border-2 border-white shadow-md">
+              <div className="relative" ref={dropdownRef}>
+                {/* Avatar trigger */}
+                <button
+                  onClick={() => setProfileOpen(!profileOpen)}
+                  className="flex items-center gap-2.5 cursor-pointer bg-transparent border-none"
+                >
+                  <div
+                    className={`w-9 h-9 rounded-[10px] overflow-hidden flex-shrink-0 border-2 ${
+                      isDark ? "border-[#1e1e1e]" : "border-[#e5e5e5]"
+                    }`}
+                  >
                     <Image
                       src={
                         currentUser.img ||
                         "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
                       }
-                      alt="Profile Picture"
-                      fill
-                      className="object-cover"
+                      alt="Profile"
+                      width={36}
+                      height={36}
+                      className="w-full h-full object-cover"
                     />
                   </div>
-                  <span className="truncate max-w-[80px] sm:max-w-[120px]">
+                  <span
+                    className={`text-[13px] font-semibold max-w-[100px] truncate hidden sm:block ${
+                      isDark ? "text-[#ccc]" : "text-[#333]"
+                    }`}
+                  >
                     {currentUser.username}
                   </span>
-                </div>
+                  <HiChevronDown
+                    className={`text-[14px] transition-transform duration-200 ${
+                      profileOpen ? "rotate-180" : ""
+                    } ${isDark ? "text-[#444]" : "text-[#bbb]"}`}
+                  />
+                </button>
 
-                {profileOpen && (
-                  <div className="absolute top-10 sm:top-12 right-0 p-3 sm:p-5 bg-gradient-to-r from-[#000000] to-[#130F40] rounded-lg shadow-lg border flex flex-col gap-2 sm:gap-4 text-white w-44 sm:w-56 transition-all ease-in-out z-50">
-                    {currentUser.isSeller && (
-                      <>
-                        <Link
-                          href="/mygigs"
-                          className="flex items-center gap-2 sm:gap-3 p-2 hover:bg-white hover:text-orange-200 rounded-md transition text-sm sm:text-base"
-                        >
-                          <MdOutlineAdd className="text-base sm:text-lg" />{" "}
-                          {t("navbar.Gigs")}
-                        </Link>
-                        <Link
-                          href="/add"
-                          className="flex items-center gap-2 sm:gap-3 p-2 hover:bg-white hover:text-orange-200 rounded-md transition text-sm sm:text-base"
-                        >
-                          <MdOutlineAdd className="text-base sm:text-lg" />{" "}
-                          {t("navbar.Add New Gig")}
-                        </Link>
-                        <Link
-                          href="/orders"
-                          className="flex items-center gap-2 sm:gap-3 p-2 hover:bg-white hover:text-orange-200 rounded-md transition text-sm sm:text-base"
-                        >
-                          <HiOutlineShoppingCart className="text-base sm:text-lg" />{" "}
-                          {t("navbar.orders")}
-                        </Link>
-                        <Link
-                          href="/chat"
-                          className="flex items-center gap-2 sm:gap-3 p-2 hover:bg-white hover:text-orange-200 rounded-md transition text-sm sm:text-base"
-                        >
-                          <TbMessages className="text-base sm:text-lg" />{" "}
-                          {t("navbar.messages")}
-                        </Link>
+                {/* Dropdown */}
+                <AnimatePresence>
+                  {profileOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                      transition={{ duration: 0.15, ease: "easeOut" }}
+                      className="absolute top-12 right-0 bg-[#0e0e0e] border border-[#1e1e1e] rounded-2xl w-56 z-50 overflow-hidden"
+                    >
+                      {/* User info header */}
+                      <div className="px-4 py-3 border-b border-[#161616]">
+                        <p className="text-[13px] font-bold text-[#ccc]">{currentUser.username}</p>
+                        <p className="text-[11px] text-[#444] mt-0.5">
+                          {currentUser.isAdmin ? "Admin account" : currentUser.isSeller ? "Freelancer account" : "Client account"}
+                        </p>
+                      </div>
+
+                      <div className="p-2">
+                        {/* Seller links */}
+                        {currentUser.isSeller && (
+                          <>
+                            <DropdownItem href="/mygigs" icon={<MdOutlineAdd />} label={t("navbar.Gigs")} onClick={() => setProfileOpen(false)} />
+                            <DropdownItem href="/add" icon={<MdOutlineAdd />} label={t("navbar.Add New Gig")} onClick={() => setProfileOpen(false)} />
+                            <DropdownItem href="/orders" icon={<HiOutlineShoppingCart />} label={t("navbar.orders")} onClick={() => setProfileOpen(false)} />
+                            <DropdownItem href="/chat" icon={<TbMessages />} label={t("navbar.messages")} onClick={() => setProfileOpen(false)} />
+                          </>
+                        )}
+
+                        {/* Buyer links */}
+                        {!currentUser.isSeller && !currentUser.isAdmin && (
+                          <>
+                            <DropdownItem href="/orders" icon={<HiOutlineShoppingCart />} label={t("navbar.orders")} onClick={() => setProfileOpen(false)} />
+                            <DropdownItem href="/allgigs" icon={<FaTasks />} label={t("allGigs")} onClick={() => setProfileOpen(false)} />
+                            <DropdownItem href="/chat" icon={<TbMessages />} label={t("navbar.messages")} onClick={() => setProfileOpen(false)} />
+                          </>
+                        )}
+
+                        {/* Admin links */}
+                        {currentUser.isAdmin && (
+                          <>
+                            <DropdownItem href="/admin" icon={<LuLayoutDashboard />} label="Dashboard" onClick={() => setProfileOpen(false)} />
+                            <DropdownItem href="/admin/messages" icon={<TbMessages />} label="Messages" onClick={() => setProfileOpen(false)} />
+                            <DropdownItem href="/admin/sellers" icon={<FaTasks />} label="Sellers" onClick={() => setProfileOpen(false)} />
+                          </>
+                        )}
+
+                        {/* Separator + logout */}
+                        <div className="h-px bg-[#161616] my-1.5" />
                         <button
                           onClick={handleLogout}
-                          className="flex items-center gap-2 sm:gap-3 p-2 hover:bg-white hover:text-orange-200 rounded-md transition text-sm sm:text-base"
+                          className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-[13px] font-medium text-[#555] hover:bg-[#1a0808] hover:text-red-400 transition-all"
                         >
-                          <IoLogOutOutline className="text-base sm:text-lg" />{" "}
+                          <IoLogOutOutline className="text-red-500 text-base" />
                           {t("navbar.logout")}
                         </button>
-                      </>
-                    )}
-
-                    {!currentUser.isSeller && !currentUser.isAdmin && (
-                      <>
-                        <Link
-                          href="/orders"
-                          className="flex items-center gap-2 sm:gap-3 p-2 hover:bg-white hover:text-orange-200 rounded-md transition text-sm sm:text-base"
-                        >
-                          <HiOutlineShoppingCart className="text-base sm:text-lg" />{" "}
-                          {t("navbar.orders")}
-                        </Link>
-                        <Link
-                          href="/allgigs"
-                          className="flex items-center gap-2 sm:gap-3 p-2 hover:bg-white hover:text-orange-200 rounded-md transition text-sm sm:text-base"
-                        >
-                          <FaTasks className="text-base sm:text-lg" />{" "}
-                          {t("allGigs")}
-                        </Link>
-                        <Link
-                          href="/chat"
-                          className="flex items-center gap-2 sm:gap-3 p-2 hover:bg-white hover:text-orange-200 rounded-md transition text-sm sm:text-base"
-                        >
-                          <TbMessages className="text-base sm:text-lg" />{" "}
-                          {t("navbar.messages")}
-                        </Link>
-                        <button
-                          onClick={handleLogout}
-                          className="flex items-center gap-2 sm:gap-3 p-2 hover:bg-white hover:text-orange-200 rounded-md transition text-sm sm:text-base"
-                        >
-                          <IoLogOutOutline className="text-base sm:text-lg" />{" "}
-                          {t("navbar.logout")}
-                        </button>
-                      </>
-                    )}
-
-                    {currentUser.isAdmin && (
-                      <>
-                        <Link
-                          href="/admin/"
-                          className="p-2 hover:bg-white hover:text-orange-200 rounded-md transition text-sm sm:text-base"
-                        >
-                          Dashboard
-                        </Link>
-                        <Link
-                          href="/admin/messages"
-                          className={`p-2 rounded-md transition text-sm sm:text-base ${
-                            pathname.startsWith("/admin/messages")
-                              ? "bg-orange-300 text-black"
-                              : "text-white"
-                          }`}
-                        >
-                          Messages
-                        </Link>
-                        <Link
-                          href="/admin/sellers"
-                          className={`p-2 rounded-md transition text-sm sm:text-base ${
-                            pathname.startsWith("/admin/sellers")
-                              ? "bg-orange-300 text-black"
-                              : "text-white"
-                          }`}
-                        >
-                          Sellers
-                        </Link>
-                        <button
-                          onClick={handleLogout}
-                          className="flex items-center gap-2 sm:gap-3 p-2 hover:bg-white hover:text-orange-200 rounded-md transition text-sm sm:text-base"
-                        >
-                          <IoLogOutOutline className="text-base sm:text-lg" />{" "}
-                          {t("navbar.logout")}
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             ) : (
               <Link href="/login">
                 <button
-                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg transition duration-300 text-sm sm:text-base ${
-                    active || pathname !== "/"
-                      ? "bg-black text-white hover:bg-gray-700"
-                      : "bg-orange-400 text-white hover:bg-orange-500"
+                  className={`text-[13px] font-bold px-5 py-2 rounded-lg transition-colors ${
+                    isDark
+                      ? "bg-orange-500 hover:bg-orange-600 text-white"
+                      : "bg-[#080808] hover:bg-[#222] text-white"
                   }`}
                 >
                   {t("navbar.signIn")}
@@ -277,10 +244,32 @@ const Navbar: React.FC = () => {
             )}
           </div>
         </div>
+
         <CategoriesBar />
       </nav>
     </>
   );
 };
+
+const DropdownItem = ({
+  href,
+  icon,
+  label,
+  onClick,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) => (
+  <Link
+    href={href}
+    onClick={onClick}
+    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium text-[#555] hover:bg-[#161616] hover:text-[#ccc] transition-all"
+  >
+    <span className="text-orange-500 text-base">{icon}</span>
+    {label}
+  </Link>
+);
 
 export default Navbar;

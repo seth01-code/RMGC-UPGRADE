@@ -11,6 +11,7 @@ import {
   FaMicrophone,
   FaVideo,
   FaRedo,
+  FaCommentDots,
 } from "react-icons/fa";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -37,6 +38,7 @@ interface ChatSidebarProps {
   selectConversation: (conv: Conversation) => void;
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
+  selectedId?: string;
 }
 
 const ChatSidebar: React.FC<ChatSidebarProps> = ({
@@ -44,11 +46,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   selectConversation,
   isSidebarOpen,
   toggleSidebar,
+  selectedId,
 }) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const socket = useRef<Socket | null>(null);
+  const router = useRouter();
 
   const fetchConversations = async () => {
     setLoading(true);
@@ -57,14 +62,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       const { data } = await newRequest.get(`/conversations/${userId}`);
       setConversations(data);
     } catch (err: any) {
-      console.error("Error fetching conversations:", err);
-      if (err.response) {
-        setError(`Server Error: ${err.response.status}`);
-      } else if (err.request) {
-        setError("No response from server. Check your connection.");
-      } else {
-        setError("Failed to fetch conversations.");
-      }
+      if (err.response) setError(`Server Error: ${err.response.status}`);
+      else if (err.request) setError("No response from server. Check your connection.");
+      else setError("Failed to fetch conversations.");
     } finally {
       setLoading(false);
     }
@@ -73,7 +73,6 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   useEffect(() => {
     socket.current = io("https://api.renewedmindsglobalconsult.com/api");
     fetchConversations();
-
     socket.current.on("messageSeen", (seenMessage: any) => {
       setConversations((prev) =>
         prev.map((conv) =>
@@ -83,127 +82,312 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
         )
       );
     });
-
-    return () => {
-      socket.current?.disconnect();
-    };
+    return () => { socket.current?.disconnect(); };
   }, [userId]);
 
-  const renderLastMessage = (lastMessage?: LastMessage) => {
-    if (!lastMessage) return "No messages yet";
+  const getInitials = (name: string) =>
+    name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
+  const renderLastMessage = (lastMessage?: LastMessage) => {
+    if (!lastMessage) return <span style={{ color: "#4B5563" }}>No messages yet</span>;
+    const iconStyle = { flexShrink: 0 as const };
     switch (lastMessage.mediaType) {
-      case "image":
-        return (
-          <span className="flex items-center gap-2 text-gray-400">
-            <FaCamera className="text-blue-400" /> Photo
-          </span>
-        );
-      case "video":
-        return (
-          <span className="flex items-center gap-2 text-gray-400">
-            <FaVideo className="text-green-400" /> Video
-          </span>
-        );
-      case "audio":
-        return (
-          <span className="flex items-center gap-2 text-gray-400">
-            <FaMicrophone className="text-purple-400" /> Voice
-          </span>
-        );
-      case "document":
-        return (
-          <span className="flex items-center gap-2 text-gray-400">
-            <FaFile className="text-red-400" /> Document
-          </span>
-        );
-      default:
-        return lastMessage.text || "No messages yet";
+      case "image":   return <span style={{ display: "flex", alignItems: "center", gap: "5px", color: "#9CA3AF" }}><FaCamera size={11} color="#FF8C47" style={iconStyle} /> Photo</span>;
+      case "video":   return <span style={{ display: "flex", alignItems: "center", gap: "5px", color: "#9CA3AF" }}><FaVideo size={11} color="#22C55E" style={iconStyle} /> Video</span>;
+      case "audio":   return <span style={{ display: "flex", alignItems: "center", gap: "5px", color: "#9CA3AF" }}><FaMicrophone size={11} color="#A78BFA" style={iconStyle} /> Voice</span>;
+      case "document":return <span style={{ display: "flex", alignItems: "center", gap: "5px", color: "#9CA3AF" }}><FaFile size={11} color="#60A5FA" style={iconStyle} /> Document</span>;
+      default:        return <span style={{ color: "#6B7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{lastMessage.text || "No messages yet"}</span>;
     }
   };
 
-  const router = useRouter();
+  const filtered = conversations.filter((c) =>
+    c.otherParticipant?.username?.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <aside
-      className={`
-        fixed inset-y-0 left-0 z-20 bg-gray-900 border-r border-gray-700
-        transition-all duration-300 overflow-hidden
-        ${isSidebarOpen ? "w-3/12 sm:w-1/5 lg:w-1/4" : "w-0 sm:w-1/5 lg:w-1/6"}
-        ${isSidebarOpen ? "block" : "hidden sm:block"}
-      `}
+      style={{
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        background: "#111111",
+        borderRight: "1px solid #1F1F1F",
+        fontFamily: "'Inter', sans-serif",
+        overflow: "hidden",
+      }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-gray-800 border-b border-gray-700 shadow-md">
-        <button
-          onClick={toggleSidebar}
-          className="sm:hidden text-white text-2xl hover:text-gray-400 transition"
-        >
-          <FaTimes />
-        </button>
-        <h2 className="text-xl font-bold text-white truncate">Chats</h2>
-        <button
-          onClick={() => router.back()}
-          className="hidden sm:flex items-center gap-2 text-white text-lg hover:text-gray-400 transition"
-        >
-          <FaArrowLeft /> Back
-        </button>
-      </div>
-
-      {/* Conversations */}
-      <div className="overflow-y-auto h-[calc(100vh-64px)] p-3 space-y-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-800">
-        {loading ? (
-          <p className="text-gray-400 text-center mt-4">
-            Loading conversations...
-          </p>
-        ) : error ? (
-          <div className="flex flex-col items-center gap-2 text-gray-400 mt-4">
-            <p>{error}</p>
-            <button
-              onClick={fetchConversations}
-              className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white py-1 px-3 rounded transition"
+      <div
+        style={{
+          padding: "16px 18px 12px",
+          background: "#141414",
+          borderBottom: "1px solid #1F1F1F",
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div
+              style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #FF6B1A, #E85D0A)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
             >
-              <FaRedo /> Retry
+              <FaCommentDots color="#fff" size={14} />
+            </div>
+            <h2 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.01em" }}>
+              Messages
+            </h2>
+          </div>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button
+              onClick={() => router.back()}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#6B7280",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                fontSize: "12px",
+                padding: "5px 8px",
+                borderRadius: "8px",
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={(e) => { const b = e.currentTarget; b.style.color = "#FF6B1A"; b.style.background = "#FF6B1A12"; }}
+              onMouseLeave={(e) => { const b = e.currentTarget; b.style.color = "#6B7280"; b.style.background = "none"; }}
+            >
+              <FaArrowLeft size={11} /> Back
+            </button>
+            <button
+              onClick={toggleSidebar}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#6B7280",
+                cursor: "pointer",
+                padding: "5px",
+                borderRadius: "8px",
+                display: "flex",
+                alignItems: "center",
+                transition: "color 0.2s",
+              }}
+              className="sidebar-close-btn"
+              onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = "#FF6B1A")}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = "#6B7280")}
+            >
+              <FaTimes size={14} />
             </button>
           </div>
-        ) : conversations.length === 0 ? (
-          <p className="text-gray-400 text-center mt-4">
-            No conversations found
-          </p>
+        </div>
+
+        {/* Search */}
+        <div style={{ position: "relative" }}>
+          <input
+            type="text"
+            placeholder="Search conversations…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              paddingLeft: "12px",
+              borderRadius: "10px",
+              background: "#1E1E1E",
+              border: "1.5px solid #2A2A2A",
+              color: "#E5E7EB",
+              fontSize: "13px",
+              outline: "none",
+              boxSizing: "border-box",
+              fontFamily: "inherit",
+              transition: "border-color 0.2s",
+            }}
+            onFocus={(e) => (e.target.style.borderColor = "#FF6B1A")}
+            onBlur={(e) => (e.target.style.borderColor = "#2A2A2A")}
+          />
+        </div>
+      </div>
+
+      {/* List */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "8px",
+          scrollbarWidth: "thin",
+          scrollbarColor: "#2A2A2A #111111",
+        }}
+      >
+        {loading ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                padding: "10px",
+                marginBottom: "4px",
+                borderRadius: "12px",
+                background: "#181818",
+              }}
+            >
+              <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: "#242424", flexShrink: 0, animation: "pulse 1.5s ease-in-out infinite" }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ height: "13px", borderRadius: "6px", background: "#242424", width: "60%", marginBottom: "6px", animation: "pulse 1.5s ease-in-out infinite" }} />
+                <div style={{ height: "11px", borderRadius: "6px", background: "#1E1E1E", width: "80%", animation: "pulse 1.5s ease-in-out infinite" }} />
+              </div>
+            </div>
+          ))
+        ) : error ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", padding: "32px 16px", color: "#6B7280", textAlign: "center" }}>
+            <p style={{ margin: 0, fontSize: "13px" }}>{error}</p>
+            <button
+              onClick={fetchConversations}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                background: "#FF6B1A",
+                color: "#fff",
+                border: "none",
+                padding: "8px 16px",
+                borderRadius: "10px",
+                cursor: "pointer",
+                fontSize: "13px",
+                fontWeight: 600,
+                transition: "background 0.2s",
+              }}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#E85D0A")}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#FF6B1A")}
+            >
+              <FaRedo size={11} /> Retry
+            </button>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", padding: "40px 16px", color: "#4B5563" }}>
+            <FaCommentDots size={28} />
+            <p style={{ margin: 0, fontSize: "13px" }}>{search ? "No results found" : "No conversations yet"}</p>
+          </div>
         ) : (
-          conversations.map((conv) => {
+          filtered.map((conv) => {
             const other = conv.otherParticipant || {};
+            const isSelected = conv._id === selectedId;
             return (
               <div
                 key={conv._id}
-                className="flex items-center gap-3 p-2 rounded-xl bg-gray-800 hover:bg-gray-700 transition cursor-pointer shadow-sm"
                 onClick={() => selectConversation(conv)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  padding: "10px 12px",
+                  marginBottom: "2px",
+                  borderRadius: "12px",
+                  background: isSelected ? "#FF6B1A18" : "transparent",
+                  border: isSelected ? "1px solid #FF6B1A30" : "1px solid transparent",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = "#1A1A1A";
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = "transparent";
+                }}
               >
-                <div className="relative w-12 h-12 rounded-full ring-2 ring-orange-400 overflow-hidden flex-shrink-0">
-                  <Image
-                    src={
-                      other.img ||
-                      "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
-                    }
-                    alt={other.username}
-                    fill
-                    className="object-cover"
-                  />
+                {/* Avatar */}
+                <div style={{ position: "relative", flexShrink: 0 }}>
+                  {other.img ? (
+                    <div style={{ width: "44px", height: "44px", borderRadius: "50%", overflow: "hidden", border: `2px solid ${isSelected ? "#FF6B1A" : "#2A2A2A"}`, transition: "border-color 0.15s" }}>
+                      <Image
+                        src={other.img}
+                        alt={other.username}
+                        width={44}
+                        height={44}
+                        style={{ objectFit: "cover", width: "100%", height: "100%" }}
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        width: "44px",
+                        height: "44px",
+                        borderRadius: "50%",
+                        background: isSelected
+                          ? "linear-gradient(135deg, #FF6B1A, #E85D0A)"
+                          : "linear-gradient(135deg, #2A2A2A, #1E1E1E)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 700,
+                        fontSize: "14px",
+                        color: isSelected ? "#fff" : "#6B7280",
+                        border: `2px solid ${isSelected ? "#FF6B1A" : "#2A2A2A"}`,
+                        transition: "all 0.15s",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {getInitials(other.username || "?")}
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-white truncate whitespace-nowrap">
+                {/* Text */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "14px",
+                      fontWeight: isSelected ? 700 : 600,
+                      color: isSelected ? "#FF8C47" : "#E5E7EB",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      transition: "color 0.15s",
+                    }}
+                  >
                     {other.username}
                   </p>
-                  <p className="text-gray-300 text-sm truncate whitespace-nowrap">
+                  <div style={{ fontSize: "12px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: "2px" }}>
                     {renderLastMessage(conv.lastMessage)}
-                  </p>
+                  </div>
                 </div>
+
+                {/* Active indicator */}
+                {isSelected && (
+                  <div
+                    style={{
+                      width: "6px",
+                      height: "6px",
+                      borderRadius: "50%",
+                      background: "#FF6B1A",
+                      flexShrink: 0,
+                    }}
+                  />
+                )}
               </div>
             );
           })
         )}
       </div>
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
+        }
+        @media (min-width: 640px) {
+          .sidebar-close-btn { display: none !important; }
+        }
+      `}</style>
     </aside>
   );
 };

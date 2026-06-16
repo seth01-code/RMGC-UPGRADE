@@ -14,22 +14,156 @@ import upload from "../utils/upload";
 import { gigReducer, INITIAL_STATE, GigState } from "../reducers/gigReducer";
 import { useExchangeRate } from "../hooks/useExchangeRate";
 import { toast, ToastContainer } from "react-toastify";
+// @ts-ignore
 import "react-toastify/dist/ReactToastify.css";
 import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  HiOutlinePhotograph,
+  HiOutlineVideoCamera,
+  HiOutlineDocumentText,
+  HiOutlineGlobe,
+  HiOutlineLightningBolt,
+  HiOutlineX,
+  HiOutlineCheck,
+  HiOutlinePlus,
+} from "react-icons/hi";
+import { MdOutlineAutoAwesome } from "react-icons/md";
+import { IoCloudUploadOutline } from "react-icons/io5";
+import ClipLoader from "react-spinners/ClipLoader";
+
+type GigField = keyof GigState;
+
+const CATEGORIES = [
+  "Web Development",
+  "Graphic Design",
+  "Digital Marketing",
+  "Content Writing",
+  "Video Editing",
+  "App Development",
+  "SEO (Search Engine Optimization)",
+  "Social Media Management",
+  "Mobile App Design",
+  "Branding",
+  "Photography",
+  "Illustration",
+  "Logo Design",
+  "UI/UX Design",
+  "E-commerce Development",
+  "Copywriting",
+  "Voice Over",
+  "Translation Services",
+  "Music Production",
+  "Business Consulting",
+  "Virtual Assistant",
+  "Photography Editing",
+  "3D Modeling",
+  "Animation",
+  "Web Scraping",
+  "Game Development",
+  "Custom Software Development",
+  "Cybersecurity",
+  "Data Analysis",
+  "Blockchain Development",
+  "Artificial Intelligence & Machine Learning",
+  "Cloud Computing",
+];
+
+// ── Reusable field wrapper ──
+const Field = ({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) => (
+  <div className="space-y-1.5">
+    <div className="flex items-center justify-between">
+      <label className="text-[11px] font-bold tracking-[0.14em] text-[#888] uppercase">
+        {label}
+      </label>
+      {hint && <span className="text-[10px] text-[#ccc]">{hint}</span>}
+    </div>
+    {children}
+  </div>
+);
+
+// ── Input style ──
+const inputCls =
+  "w-full border-2 border-[#f0f0f0] focus:border-orange-400 focus:shadow-[0_0_0_4px_rgba(249,115,22,0.07)] rounded-xl px-4 py-3 text-[13.5px] text-[#111] placeholder:text-[#ccc] outline-none transition-all bg-white";
+
+// ── Upload zone ──
+const DropZone = ({
+  label,
+  icon,
+  accept,
+  multiple = false,
+  onChange,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  accept: string;
+  multiple?: boolean;
+  onChange: (files: File[]) => void;
+}) => (
+  <label className="group flex flex-col items-center justify-center gap-2 h-28 border-2 border-dashed border-[#f0f0f0] hover:border-orange-300 hover:bg-orange-500/[0.02] rounded-2xl cursor-pointer transition-all">
+    <span className="text-[#ccc] group-hover:text-orange-400 text-[22px] transition-colors">
+      {icon}
+    </span>
+    <span className="text-[12px] font-semibold text-[#ccc] group-hover:text-orange-400 transition-colors">
+      {label}
+    </span>
+    <input
+      type="file"
+      accept={accept}
+      multiple={multiple}
+      className="hidden"
+      onChange={(e) => onChange(Array.from(e.target.files || []))}
+    />
+  </label>
+);
+
+// ── Section card ──
+const Section = ({
+  title,
+  eyebrow,
+  children,
+}: {
+  title: string;
+  eyebrow: string;
+  children: React.ReactNode;
+}) => (
+  <div className="bg-white border border-[#f0f0f0] rounded-2xl p-6 space-y-5">
+    <div>
+      <p className="text-[10px] font-bold tracking-[0.16em] text-orange-500 uppercase mb-1">
+        {eyebrow}
+      </p>
+      <h2 className="text-[15px] font-extrabold text-[#111]">{title}</h2>
+    </div>
+    {children}
+  </div>
+);
 
 const Add: React.FC = () => {
-  type GigField = keyof GigState;
   const router = useRouter();
   const queryClient = useQueryClient();
   const [state, dispatch] = useReducer(gigReducer, INITIAL_STATE);
   const [singleFile, setSingleFile] = useState<File | undefined>();
-  const [featureInput, setFeatureInput] = React.useState<string>("");
+  const [coverPreview, setCoverPreview] = useState<string>("");
+  const [featureInput, setFeatureInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [displayPrice, setDisplayPrice] = useState("");
-  const [categoryInput, setCategoryInput] = useState(state.cat || "");
+  const [categoryInput, setCategoryInput] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [country, setCountry] = useState("United States");
+  const [portfolioUrl, setPortfolioUrl] = useState("");
+  const [portfolioMode, setPortfolioMode] = useState<"upload" | "url">(
+    "upload",
+  );
+  const [step, setStep] = useState<1 | 2>(1);
 
   const currentUser: any =
     typeof window !== "undefined"
@@ -38,10 +172,7 @@ const Add: React.FC = () => {
 
   const { data: userData } = useQuery({
     queryKey: ["userData", currentUser?.id],
-    queryFn: async () => {
-      const res = await newRequest.get(`/users/me`);
-      return res.data;
-    },
+    queryFn: () => newRequest.get("/users/me").then((r) => r.data),
     enabled: !!currentUser?.id,
   });
 
@@ -51,111 +182,62 @@ const Add: React.FC = () => {
 
   const { exchangeRate } = useExchangeRate(country);
 
-  const categories = [
-    "Web Development",
-    "Graphic Design",
-    "Digital Marketing",
-    "Content Writing",
-    "Video Editing",
-    "App Development",
-    "SEO (Search Engine Optimization)",
-    "Social Media Management",
-    "Mobile App Design",
-    "Branding",
-    "Photography",
-    "Illustration",
-    "Logo Design",
-    "UI/UX Design",
-    "E-commerce Development",
-    "Copywriting",
-    "Voice Over",
-    "Translation Services",
-    "Music Production",
-    "Business Consulting",
-    "Virtual Assistant",
-    "Photography Editing",
-    "3D Modeling",
-    "Animation",
-    "Web Scraping",
-    "Game Development",
-    "Custom Software Development",
-    "Cybersecurity",
-    "Data Analysis",
-    "Blockchain Development",
-    "Artificial Intelligence & Machine Learning",
-    "Cloud Computing",
-  ];
-
-  const handleCategoryChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setCategoryInput(value);
-    dispatch({ type: "CHANGE_INPUT", payload: { name: "cat", value } });
-    setShowDropdown(value.length > 0);
-  };
-
-  const handleCategorySelect = (cat: string) => {
-    setCategoryInput(cat);
-    setShowDropdown(false);
-    dispatch({ type: "CHANGE_INPUT", payload: { name: "cat", value: cat } });
-  };
-
   const handleChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
-    const name = e.target.name as GigField;
-    const value = e.target.value;
-
     dispatch({
       type: "CHANGE_INPUT",
-      payload: {
-        name,
-        value,
-      },
+      payload: { name: e.target.name as GigField, value: e.target.value },
     });
   };
 
-  const handleFeature = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const input = (e.currentTarget[0] as HTMLInputElement).value;
-    if (input.trim()) {
-      dispatch({ type: "ADD_FEATURE", payload: input.trim() });
-      (e.currentTarget[0] as HTMLInputElement).value = "";
+  const handleCoverChange = (file: File | undefined) => {
+    setSingleFile(file);
+    if (file) setCoverPreview(URL.createObjectURL(file));
+    else setCoverPreview("");
+  };
+
+  const handlePriceChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value.replace(/\D/g, "");
+    setDisplayPrice(raw.replace(/\B(?=(\d{3})+(?!\d))/g, ","));
+    dispatch({ type: "CHANGE_INPUT", payload: { name: "price", value: raw } });
+  };
+
+  const addFeature = () => {
+    if (featureInput.trim()) {
+      dispatch({ type: "ADD_FEATURE", payload: featureInput.trim() });
+      setFeatureInput("");
     }
   };
 
   const handleUpload = async () => {
     setUploading(true);
     try {
-      const cover =
-        singleFile && singleFile.type.startsWith("image/")
-          ? (await upload(singleFile))?.url || ""
-          : "";
-
-      const validTypes = ["image/", "video/", "application/pdf"];
-      const filteredFiles = files.filter((file) =>
-        validTypes.some((type) => file.type.startsWith(type))
-      );
+      const cover = singleFile?.type.startsWith("image/")
+        ? (await upload(singleFile))?.url || ""
+        : "";
 
       const uploads = await Promise.all(
-        filteredFiles.map(async (file) => {
-          const uploaded = await upload(file);
-          return { url: uploaded?.url || "", type: file.type };
-        })
+        files.map(async (file) => {
+          const up = await upload(file);
+          return { url: up?.url || "", type: file.type };
+        }),
       );
-
-      const images = uploads
-        .filter((f) => f.type.startsWith("image/"))
-        .map((f) => f.url);
-      const videos = uploads
-        .filter((f) => f.type.startsWith("video/"))
-        .map((f) => f.url);
-      const documents = uploads
-        .filter((f) => f.type === "application/pdf")
-        .map((f) => f.url);
 
       dispatch({
         type: "ADD_IMAGES",
-        payload: { cover, images, videos, documents },
+        payload: {
+          cover,
+          images: uploads
+            .filter((f) => f.type.startsWith("image/"))
+            .map((f) => f.url),
+          videos: uploads
+            .filter((f) => f.type.startsWith("video/"))
+            .map((f) => f.url),
+          documents: uploads
+            .filter((f) => f.type === "application/pdf")
+            .map((f) => f.url),
+        },
       });
       toast.success("Files uploaded successfully");
     } catch {
@@ -166,33 +248,14 @@ const Add: React.FC = () => {
   };
 
   const mutation = useMutation({
-    mutationFn: async (gig: any) => {
-      const res = await newRequest.post("/gigs", gig);
-      return res.data;
-    },
+    mutationFn: (gig: any) => newRequest.post("/gigs", gig).then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myGigs"] });
-      toast.success("Gig added successfully");
+      toast.success("Gig created successfully!");
       router.push("/mygigs");
     },
-    onError: () => toast.error("Failed to add gig"),
+    onError: () => toast.error("Failed to create gig"),
   });
-  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Remove all non-numeric characters (leave only digits)
-    const rawValue = e.target.value.replace(/\D/g, "");
-
-    // Format number with commas for display
-    const formattedValue = rawValue.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-
-    // Dispatch the raw numeric value (Paystack expects integer values)
-    dispatch({
-      type: "CHANGE_INPUT",
-      payload: { name: "price", value: rawValue },
-    });
-
-    // Update formatted display
-    setDisplayPrice(formattedValue);
-  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -200,422 +263,696 @@ const Add: React.FC = () => {
     mutation.mutate({ ...state, price: Number(priceUSD) });
   };
 
+  const imageFiles = files.filter((f) => f.type.startsWith("image/"));
+  const videoFiles = files.filter((f) => f.type.startsWith("video/"));
+  const pdfFiles = files.filter((f) => f.type === "application/pdf");
+
+  const filteredCats = CATEGORIES.filter((c) =>
+    c.toLowerCase().includes(categoryInput.toLowerCase()),
+  );
+
   return (
-    <div className="flex justify-center px-4 sm:px-8 py-12 bg-gradient-to-b from-orange-50 to-white min-h-screen">
+    <div className="min-h-screen bg-white">
       <ToastContainer position="top-center" autoClose={3000} pauseOnHover />
-      <div className="w-full max-w-6xl bg-white shadow-lg rounded-2xl p-8">
-        <h1 className="text-3xl font-bold text-gray-700 mb-10 text-center">
-          Add New Gig
-        </h1>
 
-        <form
-          onSubmit={handleSubmit}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-12"
-        >
-          {/* LEFT SECTION */}
-          <div className="space-y-6">
-            {/* Title */}
-            <div>
-              <label className="block mb-2 font-semibold text-gray-700">
-                Title
-              </label>
-              <input
-                type="text"
-                name="title"
-                onChange={handleChange}
-                placeholder="Enter gig title"
-                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
-              />
-            </div>
-
-            {/* Category */}
-            <div className="relative">
-              <label className="block mb-2 font-semibold text-gray-700">
-                Category
-              </label>
-              <input
-                type="text"
-                value={categoryInput}
-                onChange={handleCategoryChange}
-                onFocus={() => setShowDropdown(true)}
-                placeholder="Select category"
-                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
-              />
-              {showDropdown && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                  {categories
-                    .filter((cat) =>
-                      cat.toLowerCase().includes(categoryInput.toLowerCase())
-                    )
-                    .map((cat, i) => (
-                      <div
-                        key={i}
-                        onClick={() => handleCategorySelect(cat)}
-                        className="px-4 py-2 cursor-pointer hover:bg-orange-100 hover:text-orange-700 transition"
-                      >
-                        {cat}
-                      </div>
-                    ))}
-                </div>
-              )}
-            </div>
-            {/* Cover Image */}
-            <div>
-              <label className="block mb-2 font-semibold text-gray-700">
-                Cover Image
-              </label>
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-orange-400 rounded-lg cursor-pointer hover:bg-orange-50 transition">
-                <span className="text-orange-600 font-medium">
-                  Click to select a cover image
-                </span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setSingleFile(e.target.files?.[0])}
-                  className="hidden"
-                />
-              </label>
-
-              {singleFile && (
-                <div className="flex items-center gap-3 mt-3">
-                  <div className="relative w-32 h-32">
-                    <Image
-                      src={URL.createObjectURL(singleFile)}
-                      alt="Cover Preview"
-                      fill
-                      className="object-cover rounded-xl border border-gray-200 shadow-sm"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setSingleFile(undefined)}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition shadow"
-                  >
-                    ✖
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Additional Files */}
-            <div className="mt-8">
-              <label className="block mb-4 text-center text-lg font-semibold text-gray-500">
-                Upload Additional Files (Images, Videos, PDFs)
-              </label>
-
-              <div className="flex flex-col gap-6">
-                {/* Images */}
-                <div>
-                  <label className="block mb-2 font-semibold text-gray-700">
-                    Upload Images
-                  </label>
-                  <label className="flex flex-col items-center justify-center h-28 border-2 border-dashed border-orange-400 rounded-lg cursor-pointer hover:bg-orange-50 transition">
-                    <span className="text-orange-600 font-medium">
-                      Click to select images
-                    </span>
-                    <input
-                      type="file"
-                      multiple
-                      accept="image/*"
-                      onChange={(e) => {
-                        const newImages = Array.from(
-                          e.target.files || []
-                        ).filter((f) => f.type.startsWith("image/"));
-                        setFiles((prev) => [...prev, ...newImages]);
-                      }}
-                      className="hidden"
-                    />
-                  </label>
-
-                  {/* Images Preview */}
-                  <div className="flex flex-wrap gap-3 mt-2">
-                    {files
-                      .filter((f) => f.type.startsWith("image/"))
-                      .map((file) => (
-                        <div
-                          key={file.name + file.lastModified}
-                          className="relative w-24 h-24"
-                        >
-                          <Image
-                            src={URL.createObjectURL(file)}
-                            alt={`Image Preview`}
-                            fill
-                            className="object-cover rounded-lg border border-gray-200 shadow-sm"
-                          />
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setFiles((prev) => prev.filter((f) => f !== file))
-                            }
-                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
-                          >
-                            ✖
-                          </button>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-
-                {/* Videos */}
-                <div>
-                  <label className="block mb-2 font-semibold text-gray-700">
-                    Upload Videos
-                  </label>
-                  <label className="flex flex-col items-center justify-center h-28 border-2 border-dashed border-orange-400 rounded-lg cursor-pointer hover:bg-orange-50 transition">
-                    <span className="text-orange-600 font-medium">
-                      Click to select videos
-                    </span>
-                    <input
-                      type="file"
-                      multiple
-                      accept="video/*"
-                      onChange={(e) => {
-                        const newVideos = Array.from(
-                          e.target.files || []
-                        ).filter((f) => f.type.startsWith("video/"));
-                        setFiles((prev) => [...prev, ...newVideos]);
-                      }}
-                      className="hidden"
-                    />
-                  </label>
-
-                  {/* Videos Preview */}
-                  <div className="flex flex-wrap gap-3 mt-2">
-                    {files
-                      .filter((f) => f.type.startsWith("video/"))
-                      .map((file) => (
-                        <div
-                          key={file.name + file.lastModified}
-                          className="relative w-48 h-32"
-                        >
-                          <video
-                            src={URL.createObjectURL(file)}
-                            controls
-                            className="w-full h-full rounded-lg border border-gray-200 shadow-sm"
-                          />
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setFiles((prev) => prev.filter((f) => f !== file))
-                            }
-                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
-                          >
-                            ✖
-                          </button>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-
-                {/* PDFs */}
-                <div>
-                  <label className="block mb-2 font-semibold text-gray-700">
-                    Upload PDF Documents
-                  </label>
-                  <label className="flex flex-col items-center justify-center h-28 border-2 border-dashed border-orange-400 rounded-lg cursor-pointer hover:bg-orange-50 transition">
-                    <span className="text-orange-600 font-medium">
-                      Click to select PDFs
-                    </span>
-                    <input
-                      type="file"
-                      multiple
-                      accept="application/pdf"
-                      onChange={(e) => {
-                        const newDocs = Array.from(e.target.files || []).filter(
-                          (f) => f.type === "application/pdf"
-                        );
-                        setFiles((prev) => [...prev, ...newDocs]);
-                      }}
-                      className="hidden"
-                    />
-                  </label>
-
-                  {/* PDFs Preview */}
-                  <div className="flex flex-wrap gap-3 mt-2">
-                    {files
-                      .filter((f) => f.type === "application/pdf")
-                      .map((file) => (
-                        <div
-                          key={file.name + file.lastModified}
-                          className="relative"
-                        >
-                          <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-700 font-medium shadow-sm">
-                            {file.name}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setFiles((prev) => prev.filter((f) => f !== file))
-                            }
-                            className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
-                          >
-                            ✖
-                          </button>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-
-                {/* Upload All Button */}
-                <button
-                  type="button"
-                  className="mt-3 bg-orange-500 text-white px-5 py-2 rounded-lg hover:bg-orange-600 transition shadow"
-                  onClick={handleUpload}
-                  disabled={uploading}
-                >
-                  {uploading ? "Uploading..." : "Upload All Selected Files"}
-                </button>
-              </div>
-            </div>
-
-            {/* Description */}
-            <div>
-              <label className="block mb-2 font-semibold text-gray-700">
-                Description
-              </label>
-              <textarea
-                name="desc"
-                onChange={handleChange}
-                placeholder="Describe your gig..."
-                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
-              />
-            </div>
+      <div className="max-w-screen-xl mx-auto px-6 md:px-12 py-12">
+        {/* ── Page header ── */}
+        <div className="mb-10">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-px w-6 bg-orange-500" />
+            <span className="text-[11px] font-bold tracking-[0.18em] text-orange-500 uppercase">
+              Freelancer tools
+            </span>
           </div>
+          <h1 className="text-[28px] md:text-[34px] font-extrabold text-[#111] leading-tight">
+            Create a new gig
+          </h1>
+          <p className="text-[13px] text-[#aaa] mt-1.5">
+            Fill in the details below to list your service on the marketplace.
+          </p>
+        </div>
 
-          {/* RIGHT SECTION */}
-          <div className="space-y-6">
-            {/* Service Title */}
-            <div>
-              <label className="block mb-2 font-semibold text-gray-700">
-                Service Title
-              </label>
-              <input
-                name="shortTitle"
-                onChange={handleChange}
-                placeholder="Short title"
-                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
-              />
-            </div>
-
-            {/* Short Description */}
-            <div>
-              <label className="block mb-2 font-semibold text-gray-700">
-                Short Description
-              </label>
-              <textarea
-                name="shortDesc"
-                onChange={handleChange}
-                placeholder="Short description"
-                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
-              />
-            </div>
-
-            {/* Delivery Time */}
-            <div>
-              <label className="block mb-2 font-semibold text-gray-700">
-                Delivery Time (days)
-              </label>
-              <input
-                type="number"
-                name="deliveryTime"
-                min={1} // minimum value 1
-                onChange={handleChange}
-                value={state.deliveryTime || 1} // default 1
-                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
-              />
-            </div>
-
-            {/* Revisions */}
-            <div>
-              <label className="block mb-2 font-semibold text-gray-700">
-                Revisions
-              </label>
-              <input
-                type="number"
-                name="revisionNumber"
-                min={1} // minimum value 1
-                onChange={handleChange}
-                value={state.revisionNumber || 1} // default 1
-                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
-              />
-            </div>
-
-            {/* Features */}
-            <div>
-              <label className="block mb-2 font-semibold text-gray-700">
-                Features
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={featureInput}
-                  onChange={(e) => setFeatureInput(e.target.value)}
-                  placeholder="Add feature"
-                  className="flex-1 border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      if (featureInput.trim() !== "") {
-                        dispatch({
-                          type: "ADD_FEATURE",
-                          payload: featureInput,
-                        });
-                        setFeatureInput("");
-                      }
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (featureInput.trim() !== "") {
-                      dispatch({ type: "ADD_FEATURE", payload: featureInput });
-                      setFeatureInput("");
-                    }
-                  }}
-                  className="bg-orange-500 text-white px-5 py-2 rounded-lg hover:bg-orange-600 transition shadow"
-                >
-                  Add
-                </button>
-              </div>
-
-              <div className="flex flex-wrap gap-2 mt-3">
-                {state.features.map((f: string) => (
-                  <button
-                    key={f}
-                    type="button"
-                    onClick={() =>
-                      dispatch({ type: "REMOVE_FEATURE", payload: f })
-                    }
-                    className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full flex items-center gap-2 font-medium shadow-sm hover:bg-orange-200"
-                  >
-                    {f} ✖
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Price */}
-            <div>
-              <label className="block mb-2 font-semibold text-gray-700">
-                Price
-              </label>
-              <input
-                type="text"
-                name="price"
-                onChange={handlePriceChange}
-                value={displayPrice}
-                placeholder="Enter price"
-                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
-              />
-            </div>
-
+        {/* ── Step tabs ── */}
+        <div className="flex items-center gap-1 mb-8 border-b border-[#f0f0f0]">
+          {[
+            { n: 1 as const, label: "Gig details" },
+            { n: 2 as const, label: "Media & portfolio" },
+          ].map((s) => (
             <button
-              type="submit"
-              className="w-full mt-6 bg-orange-500 text-white py-3 rounded-xl font-bold text-lg hover:bg-orange-600 transition shadow"
+              key={s.n}
+              onClick={() => setStep(s.n)}
+              className={`relative flex items-center gap-2 px-4 py-3 text-[13px] font-semibold transition-colors ${
+                step === s.n ? "text-[#111]" : "text-[#bbb] hover:text-[#888]"
+              }`}
             >
-              Create Gig
+              <span
+                className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center flex-shrink-0 ${
+                  step === s.n
+                    ? "bg-orange-500 text-white"
+                    : "bg-[#f5f5f5] text-[#bbb]"
+                }`}
+              >
+                {s.n}
+              </span>
+              {s.label}
+              {step === s.n && (
+                <motion.div
+                  layoutId="step-indicator"
+                  className="absolute bottom-0 left-0 right-0 h-[2px] bg-orange-500 rounded-t-full"
+                />
+              )}
             </button>
+          ))}
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <AnimatePresence mode="wait">
+            {/* ══ STEP 1 — Gig details ══ */}
+            {step === 1 && (
+              <motion.div
+                key="step1"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+              >
+                {/* Left */}
+                <div className="space-y-6">
+                  <Section eyebrow="Basic info" title="About this gig">
+                    <Field label="Gig title" hint="Be specific and clear">
+                      <input
+                        type="text"
+                        name="title"
+                        onChange={handleChange}
+                        placeholder="e.g. I will design a professional logo"
+                        className={inputCls}
+                      />
+                    </Field>
+
+                    {/* Category autocomplete */}
+                    <Field label="Category">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={categoryInput}
+                          onChange={(e) => {
+                            setCategoryInput(e.target.value);
+                            setShowDropdown(true);
+                            dispatch({
+                              type: "CHANGE_INPUT",
+                              payload: { name: "cat", value: e.target.value },
+                            });
+                          }}
+                          onFocus={() => setShowDropdown(true)}
+                          onBlur={() =>
+                            setTimeout(() => setShowDropdown(false), 150)
+                          }
+                          placeholder="Search or select a category"
+                          className={inputCls}
+                        />
+                        <AnimatePresence>
+                          {showDropdown && filteredCats.length > 0 && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -6 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -6 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute top-full left-0 right-0 mt-1 bg-white border border-[#f0f0f0] rounded-2xl shadow-lg z-20 max-h-52 overflow-y-auto p-1.5"
+                            >
+                              {filteredCats.map((cat, i) => (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  onMouseDown={() => {
+                                    setCategoryInput(cat);
+                                    dispatch({
+                                      type: "CHANGE_INPUT",
+                                      payload: { name: "cat", value: cat },
+                                    });
+                                    setShowDropdown(false);
+                                  }}
+                                  className={`w-full text-left px-3.5 py-2.5 text-[12.5px] font-medium rounded-xl transition-all ${
+                                    categoryInput === cat
+                                      ? "bg-orange-500/10 text-orange-500"
+                                      : "text-[#555] hover:bg-[#f7f7f7] hover:text-[#111]"
+                                  }`}
+                                >
+                                  {cat}
+                                </button>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </Field>
+
+                    <Field label="Description" hint="Min. 100 characters">
+                      <textarea
+                        name="desc"
+                        onChange={handleChange}
+                        rows={5}
+                        placeholder="Describe what you offer, your process, and what makes you different..."
+                        className={`${inputCls} resize-none`}
+                      />
+                    </Field>
+                  </Section>
+
+                  {/* Cover image */}
+                  <Section eyebrow="Thumbnail" title="Cover image">
+                    {coverPreview ? (
+                      <div className="relative w-full h-[200px] rounded-2xl overflow-hidden border border-[#f0f0f0]">
+                        <Image
+                          src={coverPreview}
+                          alt="Cover"
+                          fill
+                          className="object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleCoverChange(undefined)}
+                          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-500 transition-colors"
+                        >
+                          <HiOutlineX className="text-[14px]" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="group flex flex-col items-center justify-center gap-3 h-[180px] border-2 border-dashed border-[#f0f0f0] hover:border-orange-300 hover:bg-orange-500/[0.02] rounded-2xl cursor-pointer transition-all">
+                        <div className="w-12 h-12 rounded-2xl bg-[#fafafa] border border-[#f0f0f0] group-hover:border-orange-200 group-hover:bg-orange-500/5 flex items-center justify-center transition-all">
+                          <HiOutlinePhotograph className="text-[22px] text-[#ccc] group-hover:text-orange-400 transition-colors" />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[13px] font-semibold text-[#bbb] group-hover:text-orange-400 transition-colors">
+                            Click to upload cover image
+                          </p>
+                          <p className="text-[11px] text-[#ccc] mt-0.5">
+                            PNG, JPG up to 10MB
+                          </p>
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) =>
+                            handleCoverChange(e.target.files?.[0])
+                          }
+                        />
+                      </label>
+                    )}
+                  </Section>
+                </div>
+
+                {/* Right */}
+                <div className="space-y-6">
+                  <Section eyebrow="Service details" title="Pricing & delivery">
+                    <div className="grid grid-cols-2 gap-4">
+                      <Field label="Delivery time" hint="In days">
+                        <input
+                          type="number"
+                          name="deliveryTime"
+                          min={1}
+                          value={state.deliveryTime || 1}
+                          onChange={handleChange}
+                          className={inputCls}
+                        />
+                      </Field>
+                      <Field label="Revisions">
+                        <input
+                          type="number"
+                          name="revisionNumber"
+                          min={1}
+                          value={state.revisionNumber || 1}
+                          onChange={handleChange}
+                          className={inputCls}
+                        />
+                      </Field>
+                    </div>
+
+                    <Field label="Price" hint={`In your local currency`}>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[13px] font-bold text-[#bbb]">
+                          {country === "Nigeria" ? "₦" : "$"}
+                        </span>
+                        <input
+                          type="text"
+                          name="price"
+                          value={displayPrice}
+                          onChange={handlePriceChange}
+                          placeholder="0.00"
+                          className={`${inputCls} pl-8`}
+                        />
+                      </div>
+                    </Field>
+
+                    <Field label="Short service title">
+                      <input
+                        name="shortTitle"
+                        onChange={handleChange}
+                        placeholder="e.g. Professional logo design"
+                        className={inputCls}
+                      />
+                    </Field>
+
+                    <Field
+                      label="Short description"
+                      hint="Appears in search results"
+                    >
+                      <textarea
+                        name="shortDesc"
+                        onChange={handleChange}
+                        rows={3}
+                        placeholder="One-line pitch for your gig..."
+                        className={`${inputCls} resize-none`}
+                      />
+                    </Field>
+                  </Section>
+
+                  {/* Features */}
+                  <Section eyebrow="Inclusions" title="What's included">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={featureInput}
+                        onChange={(e) => setFeatureInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addFeature();
+                          }
+                        }}
+                        placeholder="e.g. Source files included"
+                        className={inputCls}
+                      />
+                      <button
+                        type="button"
+                        onClick={addFeature}
+                        className="w-11 h-11 flex-shrink-0 flex items-center justify-center bg-[#111] hover:bg-orange-500 text-white rounded-xl transition-all"
+                      >
+                        <HiOutlinePlus className="text-[16px]" />
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      <AnimatePresence>
+                        {state.features.map((f: string) => (
+                          <motion.button
+                            key={f}
+                            type="button"
+                            initial={{ opacity: 0, scale: 0.85 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.85 }}
+                            onClick={() =>
+                              dispatch({ type: "REMOVE_FEATURE", payload: f })
+                            }
+                            className="flex items-center gap-2 bg-orange-500/10 border border-orange-500/20 text-orange-500 text-[12px] font-semibold px-3 py-1.5 rounded-xl hover:bg-red-50 hover:text-red-400 hover:border-red-100 transition-all"
+                          >
+                            <HiOutlineCheck className="text-[11px]" />
+                            {f}
+                            <HiOutlineX className="text-[10px] opacity-60" />
+                          </motion.button>
+                        ))}
+                      </AnimatePresence>
+                      {state.features.length === 0 && (
+                        <p className="text-[12px] text-[#ccc]">
+                          No features added yet.
+                        </p>
+                      )}
+                    </div>
+                  </Section>
+
+                  {/* Next button */}
+                  <button
+                    type="button"
+                    onClick={() => setStep(2)}
+                    className="w-full flex items-center justify-center gap-2 bg-[#111] hover:bg-orange-500 text-white text-[13.5px] font-bold py-3.5 rounded-xl transition-all"
+                  >
+                    Continue to media
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path
+                        d="M2 6h8M6 2l4 4-4 4"
+                        stroke="white"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ══ STEP 2 — Media & portfolio ══ */}
+            {step === 2 && (
+              <motion.div
+                key="step2"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+              >
+                {/* Left — media uploads */}
+                <div className="space-y-6">
+                  <Section eyebrow="Sample work" title="Upload media files">
+                    <p className="text-[12.5px] text-[#aaa] leading-relaxed -mt-2">
+                      Add images, videos, or PDF documents that showcase your
+                      work.
+                    </p>
+
+                    {/* Images */}
+                    <div>
+                      <p className="text-[11px] font-bold tracking-[0.12em] text-[#bbb] uppercase mb-2">
+                        Images
+                      </p>
+                      <DropZone
+                        label="Click to upload images"
+                        icon={<HiOutlinePhotograph />}
+                        accept="image/*"
+                        multiple
+                        onChange={(f) =>
+                          setFiles((p) => [
+                            ...p,
+                            ...f.filter((x) => x.type.startsWith("image/")),
+                          ])
+                        }
+                      />
+                      {imageFiles.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {imageFiles.map((file) => (
+                            <div
+                              key={file.name + file.lastModified}
+                              className="relative w-20 h-20"
+                            >
+                              <Image
+                                src={URL.createObjectURL(file)}
+                                alt="preview"
+                                fill
+                                className="object-cover rounded-xl border border-[#f0f0f0]"
+                              />
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFiles((p) => p.filter((f) => f !== file))
+                                }
+                                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#111] text-white flex items-center justify-center hover:bg-red-500 transition-colors"
+                              >
+                                <HiOutlineX className="text-[9px]" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Videos */}
+                    <div>
+                      <p className="text-[11px] font-bold tracking-[0.12em] text-[#bbb] uppercase mb-2">
+                        Videos
+                      </p>
+                      <DropZone
+                        label="Click to upload videos"
+                        icon={<HiOutlineVideoCamera />}
+                        accept="video/*"
+                        multiple
+                        onChange={(f) =>
+                          setFiles((p) => [
+                            ...p,
+                            ...f.filter((x) => x.type.startsWith("video/")),
+                          ])
+                        }
+                      />
+                      {videoFiles.length > 0 && (
+                        <div className="flex flex-col gap-2 mt-3">
+                          {videoFiles.map((file) => (
+                            <div
+                              key={file.name + file.lastModified}
+                              className="flex items-center gap-3 p-3 bg-[#fafafa] border border-[#f0f0f0] rounded-xl"
+                            >
+                              <HiOutlineVideoCamera className="text-orange-400 text-[16px] flex-shrink-0" />
+                              <span className="text-[12px] text-[#555] truncate flex-1">
+                                {file.name}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFiles((p) => p.filter((f) => f !== file))
+                                }
+                                className="text-[#ccc] hover:text-red-400 transition-colors"
+                              >
+                                <HiOutlineX className="text-[13px]" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* PDFs */}
+                    <div>
+                      <p className="text-[11px] font-bold tracking-[0.12em] text-[#bbb] uppercase mb-2">
+                        Documents
+                      </p>
+                      <DropZone
+                        label="Click to upload PDFs"
+                        icon={<HiOutlineDocumentText />}
+                        accept="application/pdf"
+                        multiple
+                        onChange={(f) =>
+                          setFiles((p) => [
+                            ...p,
+                            ...f.filter((x) => x.type === "application/pdf"),
+                          ])
+                        }
+                      />
+                      {pdfFiles.length > 0 && (
+                        <div className="flex flex-col gap-2 mt-3">
+                          {pdfFiles.map((file) => (
+                            <div
+                              key={file.name + file.lastModified}
+                              className="flex items-center gap-3 p-3 bg-[#fafafa] border border-[#f0f0f0] rounded-xl"
+                            >
+                              <HiOutlineDocumentText className="text-orange-400 text-[16px] flex-shrink-0" />
+                              <span className="text-[12px] text-[#555] truncate flex-1">
+                                {file.name}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFiles((p) => p.filter((f) => f !== file))
+                                }
+                                className="text-[#ccc] hover:text-red-400 transition-colors"
+                              >
+                                <HiOutlineX className="text-[13px]" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Upload button */}
+                    {(imageFiles.length > 0 ||
+                      videoFiles.length > 0 ||
+                      pdfFiles.length > 0) && (
+                      <button
+                        type="button"
+                        onClick={handleUpload}
+                        disabled={uploading}
+                        className="w-full flex items-center justify-center gap-2 border-2 border-[#111] hover:bg-[#111] text-[#111] hover:text-white text-[13px] font-bold py-3 rounded-xl transition-all disabled:opacity-50"
+                      >
+                        {uploading ? (
+                          <ClipLoader size={14} color="currentColor" />
+                        ) : (
+                          <IoCloudUploadOutline className="text-[17px]" />
+                        )}
+                        {uploading
+                          ? "Uploading..."
+                          : `Upload ${imageFiles.length + videoFiles.length + pdfFiles.length} file${imageFiles.length + videoFiles.length + pdfFiles.length !== 1 ? "s" : ""}`}
+                      </button>
+                    )}
+                  </Section>
+                </div>
+
+                {/* Right — AI portfolio */}
+                <div className="space-y-6">
+                  <Section eyebrow="AI-powered" title="Portfolio extractor">
+                    {/* Coming soon badge */}
+                    <div className="flex items-center gap-2 -mt-2 mb-1">
+                      <span className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-orange-500 bg-orange-500/10 border border-orange-500/20 px-2.5 py-1 rounded-lg uppercase">
+                        <MdOutlineAutoAwesome className="text-[11px]" />
+                        AI feature
+                      </span>
+                      <span className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-[#aaa] bg-[#f5f5f5] border border-[#ebebeb] px-2.5 py-1 rounded-lg uppercase">
+                        <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                        In development
+                      </span>
+                    </div>
+
+                    <p className="text-[12.5px] text-[#aaa] leading-relaxed">
+                      Instead of manually uploading sample images, paste your
+                      portfolio URL or upload your portfolio document. Our AI
+                      will extract your best work automatically.
+                    </p>
+
+                    {/* Mode toggle */}
+                    <div className="flex items-center gap-1 p-1 bg-[#f7f7f7] border border-[#f0f0f0] rounded-xl">
+                      {(["url", "upload"] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setPortfolioMode(mode)}
+                          className={`flex-1 flex items-center justify-center gap-2 py-2 text-[12px] font-semibold rounded-lg transition-all ${
+                            portfolioMode === mode
+                              ? "bg-white border border-[#f0f0f0] text-[#111] shadow-sm"
+                              : "text-[#bbb] hover:text-[#888]"
+                          }`}
+                        >
+                          {mode === "url" ? (
+                            <HiOutlineGlobe className="text-[14px]" />
+                          ) : (
+                            <HiOutlineDocumentText className="text-[14px]" />
+                          )}
+                          {mode === "url" ? "Website URL" : "Upload portfolio"}
+                        </button>
+                      ))}
+                    </div>
+
+                    <AnimatePresence mode="wait">
+                      {portfolioMode === "url" ? (
+                        <motion.div
+                          key="url"
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -6 }}
+                          transition={{ duration: 0.15 }}
+                          className="space-y-3"
+                        >
+                          <div className="relative">
+                            <HiOutlineGlobe className="absolute left-4 top-1/2 -translate-y-1/2 text-[#ccc] text-[16px]" />
+                            <input
+                              type="url"
+                              value={portfolioUrl}
+                              onChange={(e) => setPortfolioUrl(e.target.value)}
+                              placeholder="https://yourportfolio.com"
+                              className={`${inputCls} pl-10`}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            disabled
+                            className="w-full flex items-center justify-center gap-2 bg-[#f7f7f7] border border-[#ebebeb] text-[#ccc] text-[13px] font-bold py-3 rounded-xl cursor-not-allowed"
+                          >
+                            <HiOutlineLightningBolt className="text-[15px]" />
+                            Extract portfolio with AI
+                          </button>
+                          <p className="text-[11px] text-center text-[#ccc]">
+                            Coming soon — AI will scan your site and pull sample
+                            work automatically.
+                          </p>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="upload"
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -6 }}
+                          transition={{ duration: 0.15 }}
+                          className="space-y-3"
+                        >
+                          <label className="group flex flex-col items-center justify-center gap-3 h-36 border-2 border-dashed border-[#f0f0f0] hover:border-orange-300 hover:bg-orange-500/[0.02] rounded-2xl cursor-pointer transition-all opacity-60 pointer-events-none">
+                            <div className="w-12 h-12 rounded-2xl bg-[#fafafa] border border-[#f0f0f0] flex items-center justify-center">
+                              <MdOutlineAutoAwesome className="text-[20px] text-[#ccc]" />
+                            </div>
+                            <div className="text-center">
+                              <p className="text-[12.5px] font-semibold text-[#ccc]">
+                                Upload PDF or image portfolio
+                              </p>
+                              <p className="text-[11px] text-[#ddd] mt-0.5">
+                                AI extraction coming soon
+                              </p>
+                            </div>
+                          </label>
+                          <p className="text-[11px] text-center text-[#ccc]">
+                            Soon you'll be able to upload your CV, portfolio
+                            PDF, or design files and let AI do the rest.
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* How it will work */}
+                    <div className="border-t border-[#f5f5f5] pt-4 mt-2">
+                      <p className="text-[10px] font-bold tracking-[0.14em] text-[#bbb] uppercase mb-3">
+                        How it will work
+                      </p>
+                      <div className="space-y-2">
+                        {[
+                          "Paste your portfolio URL or upload a file",
+                          "AI scans and extracts your best sample work",
+                          "Extracted samples auto-populate your gig gallery",
+                          "Review and approve before publishing",
+                        ].map((step, i) => (
+                          <div key={i} className="flex items-start gap-3">
+                            <span className="w-5 h-5 rounded-lg bg-orange-500/10 border border-orange-500/15 flex items-center justify-center text-[9px] font-bold text-orange-500 flex-shrink-0 mt-0.5">
+                              {i + 1}
+                            </span>
+                            <span className="text-[12px] text-[#aaa] leading-snug">
+                              {step}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </Section>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ── Bottom action bar ── */}
+          <div className="mt-8 flex items-center justify-between gap-4 pt-6 border-t border-[#f0f0f0]">
+            {step === 2 && (
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="flex items-center gap-2 text-[13px] font-semibold text-[#aaa] hover:text-orange-500 transition-colors"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path
+                    d="M10 6H2M6 10L2 6l4-4"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                Back to details
+              </button>
+            )}
+
+            <div className="ml-auto flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => router.push("/mygigs")}
+                className="text-[13px] font-semibold text-[#bbb] hover:text-[#555] px-4 py-3 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={mutation.isPending}
+                className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:bg-[#f5f5f5] disabled:text-[#ccc] text-white text-[13.5px] font-bold px-8 py-3 rounded-xl transition-all"
+              >
+                {mutation.isPending ? (
+                  <ClipLoader size={14} color="#fff" />
+                ) : (
+                  <>
+                    Publish gig
+                    <HiOutlineCheck className="text-[15px]" />
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </form>
       </div>

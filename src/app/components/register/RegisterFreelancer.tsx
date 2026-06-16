@@ -5,18 +5,73 @@ import upload from "../../utils/upload";
 import newRequest from "../../utils/newRequest";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
-import { Eye, EyeOff, Upload } from "lucide-react";
+import { Eye, EyeOff, FileText, Link2, FileUp, X, Loader2, CheckCircle2, Wand2 } from "lucide-react";
 import Image from "next/image";
 
-function RegisterFreelancer() {
+// ── Shared primitives ──────────────────────────────────────────────────────
+
+const Label = ({ children, hint, badge }: { children: React.ReactNode; hint?: string; badge?: boolean }) => (
+  <div className="flex items-center justify-between mb-1.5">
+    <div className="flex items-center gap-2">
+      <label className="block text-[11px] font-bold tracking-[0.12em] text-[#888] uppercase">
+        {children}
+      </label>
+      {badge && (
+        <span className="text-[9px] font-bold text-green-600 bg-green-50 border border-green-100 px-1.5 py-0.5 rounded-full uppercase tracking-wide">
+          auto-filled
+        </span>
+      )}
+    </div>
+    {hint && <span className="text-[10.5px] text-[#ccc]">{hint}</span>}
+  </div>
+);
+
+const SectionHead = ({ children }: { children: React.ReactNode }) => (
+  <div className="flex items-center gap-3 mb-4">
+    <div className="h-px w-3 bg-orange-500 shrink-0" />
+    <p className="text-[10.5px] font-bold tracking-[0.18em] text-orange-500 uppercase whitespace-nowrap">
+      {children}
+    </p>
+    <div className="flex-1 h-px bg-[#f0f0f0]" />
+  </div>
+);
+
+const inputCls =
+  "w-full px-3.5 py-2.5 text-[13.5px] text-[#111] bg-white border border-[#e8e8e8] rounded-xl placeholder:text-[#ccc] focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all";
+
+const inputFilledCls =
+  "w-full px-3.5 py-2.5 text-[13.5px] text-[#111] bg-green-50 border border-green-200 rounded-xl placeholder:text-[#ccc] focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all";
+
+const textareaCls =
+  "w-full px-3.5 py-2.5 text-[13.5px] text-[#111] bg-white border border-[#e8e8e8] rounded-xl placeholder:text-[#ccc] focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all resize-none min-h-[90px]";
+
+const textareaFilledCls =
+  "w-full px-3.5 py-2.5 text-[13.5px] text-[#111] bg-green-50 border border-green-200 rounded-xl placeholder:text-[#ccc] focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all resize-none min-h-[90px]";
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default function RegisterFreelancer() {
+  const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [languages, setLanguages] = useState<string[]>([]);
   const [services, setServices] = useState<string[]>([]);
+  const [langInput, setLangInput] = useState("");
+  const [serviceInput, setServiceInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const [user, setUser] = useState<any>({
+  // ── Smart populate state
+  const [portfolioUrl, setPortfolioUrl] = useState("");
+  const [portfolioFile, setPortfolioFile] = useState<File | null>(null);
+  const [populating, setPopulating] = useState(false);
+  const [populated, setPopulated] = useState(false);
+  const [populateError, setPopulateError] = useState("");
+
+  // Track which fields were auto-filled so we can highlight them
+  const [autoFilled, setAutoFilled] = useState<Set<string>>(new Set());
+
+  const [user, setUser] = useState({
     username: "",
     fullName: "",
     dob: "",
@@ -25,361 +80,448 @@ function RegisterFreelancer() {
     country: "",
     email: "",
     password: "",
-    profilePicture: "",
     yearsOfExperience: "",
     stateOfResidence: "",
-    countryOfResidence: "",
     isSeller: true,
     desc: "",
-    nextOfKin: {
-      fullName: "",
-      phone: "",
-    },
+    nextOfKin: { fullName: "", phone: "" },
   });
+  const [portfolioData, setPortfolioData] = useState<object | null>(null);
 
-  const router = useRouter();
-
-  const togglePasswordVisibility = () => setShowPassword((prev) => !prev);
-
-  const handleChange = (e: any) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setUser((prev: any) => ({ ...prev, [name]: value }));
+    setUser((prev) => ({ ...prev, [name]: value }));
+    // If user edits an auto-filled field, remove the highlight
+    setAutoFilled((prev) => { const n = new Set(prev); n.delete(name); return n; });
 
-    // Age check for 18+
     if (name === "dob") {
-      const birthDate = new Date(value);
-
-      if (isNaN(birthDate.getTime())) return; // Guard against invalid dates
-
+      const birth = new Date(value);
+      if (isNaN(birth.getTime())) return;
       const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-
-      // Check if birthday has occurred this year
-      const hasBirthdayPassedThisYear =
-        today.getMonth() > birthDate.getMonth() ||
-        (today.getMonth() === birthDate.getMonth() &&
-          today.getDate() >= birthDate.getDate());
-
-      if (!hasBirthdayPassedThisYear) {
-        age--;
-      }
-
+      let age = today.getFullYear() - birth.getFullYear();
+      const hasPassed =
+        today.getMonth() > birth.getMonth() ||
+        (today.getMonth() === birth.getMonth() && today.getDate() >= birth.getDate());
+      if (!hasPassed) age--;
       if (age < 18) {
-        toast.error("You must be at least 18 years old to register.");
-        setUser((prev) => ({ ...prev, dob: "" })); // Clear invalid DOB
+        toast.error("You must be at least 18 to register.");
+        setUser((prev) => ({ ...prev, dob: "" }));
       }
     }
   };
 
-  const handleNextOfKinChange = (e: any) => {
-    setUser((prev: any) => ({
+  const handleNextOfKinChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+    setUser((prev) => ({
       ...prev,
       nextOfKin: { ...prev.nextOfKin, [e.target.name]: e.target.value },
     }));
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (selected) { setFile(selected); setPreview(URL.createObjectURL(selected)); }
   };
 
-  const handleLanguagesInput = (e: any) => {
-    const values = e.target.value
-      .split(",")
-      .map((lang: string) => lang.trim())
-      .filter(Boolean);
-    setLanguages(values);
+  const addTag = (
+    input: string,
+    list: string[],
+    setList: (v: string[]) => void,
+    setInput: (v: string) => void
+  ) => {
+    const trimmed = input.trim();
+    if (trimmed && !list.includes(trimmed)) setList([...list, trimmed]);
+    setInput("");
   };
 
-  const handleServicesInput = (e: any) => {
-    const values = e.target.value
-      .split(",")
-      .map((service: string) => service.trim())
-      .filter(Boolean);
-    setServices(values);
-  };
+  const removeTag = (tag: string, list: string[], setList: (v: string[]) => void) =>
+    setList(list.filter((t) => t !== tag));
 
-  const handleFileChange = (e: any) => {
-    const selected = e.target.files[0];
-    if (selected) {
-      setFile(selected);
-      setPreview(URL.createObjectURL(selected));
+  // ── Smart populate — calls /portfolio/analyze-temp (no auth needed)
+const handlePopulate = async () => {
+  if (!portfolioUrl.trim() && !portfolioFile) {
+    setPopulateError("Add a portfolio URL or upload a file first.");
+    return;
+  }
+  setPopulateError("");
+  setPopulating(true);
+
+  try {
+    const formData = new FormData();
+    if (portfolioFile) formData.append("files", portfolioFile);
+    if (portfolioUrl.trim()) formData.append("url", portfolioUrl.trim());
+
+    const res = await newRequest.post("/portfolio/analyze-temp", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+
+    const p = res.data.portfolio;
+    const filled = new Set<string>();
+
+    const descParts: string[] = [];
+    if (p.headline) descParts.push(p.headline);
+    if (p.skills?.length) descParts.push(`\nCore skills: ${p.skills.slice(0, 6).join(", ")}.`);
+    const newDesc = descParts.join("\n\n").trim();
+
+    setUser((prev) => {
+      const updated = { ...prev };
+      if (newDesc) { updated.desc = newDesc; filled.add("desc"); }
+      if (p.experience) { updated.yearsOfExperience = String(p.experience); filled.add("yearsOfExperience"); }
+      return updated;
+    });
+
+    if (p.services?.length > 0) {
+      setServices((prev) => [...new Set([...prev, ...p.services])]);
+      filled.add("services");
     }
-  };
 
-  const handleSubmit = async (e: any) => {
+    setAutoFilled(filled);
+    setPortfolioData(p);
+    setPopulated(true);
+    toast.success("Profile details populated from your portfolio!");
+  } catch (err: any) {
+    const msg = err.response?.data?.message || "Couldn't read your portfolio. Try again.";
+    setPopulateError(msg);
+    toast.error(msg);
+  } finally {
+    setPopulating(false);
+  }
+};
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    let imageUrl = user.profilePicture;
-
+    let imageUrl = "";
     if (file) {
       try {
-        const uploadedImage = await upload(file);
-        imageUrl = uploadedImage?.url || "";
+        const uploaded = await upload(file);
+        imageUrl = uploaded?.url || "";
       } catch {
-        toast.error("Error uploading image. Please try again.");
-        setLoading(false);
-        return;
+        toast.error("Image upload failed."); setLoading(false); return;
       }
     }
-
-    const userData = {
-      ...user,
-      img: imageUrl,
-      languages,
-      services,
-    };
-
     try {
-      // Store registration data temporarily via backend
-      await newRequest.post("/auth/register", userData);
-
-      toast.success("OTP sent! Please check your email.");
+      await newRequest.post("/auth/register", {
+  ...user,
+  img: imageUrl,
+  languages,
+  services,
+  portfolio: portfolioData
+    ? { status: "completed", analyzedAt: new Date(), ...portfolioData }
+    : undefined,
+});
+      toast.success("OTP sent — check your email.");
       router.push(`/verify-otp?email=${encodeURIComponent(user.email)}`);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Registration failed");
+      toast.error(err?.response?.data?.message || "Registration failed.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-100 via-white to-orange-50 px-4 py-10">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-4xl bg-white/80 backdrop-blur-md shadow-2xl rounded-3xl p-10 md:p-12 border border-orange-100 relative"
-      >
+    <form onSubmit={handleSubmit} className="flex flex-col gap-8">
+
+      {/* ── Avatar ── */}
+      <div className="flex items-center gap-4">
+        <label htmlFor="freelancerAvatar" className="cursor-pointer group relative shrink-0">
+          <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-[#e0e0e0] group-hover:border-orange-400 bg-[#fafafa] overflow-hidden flex items-center justify-center transition-all relative">
+            {preview ? (
+              <Image src={preview} alt="Preview" fill className="object-cover rounded-2xl" />
+            ) : (
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" className="text-[#ccc] group-hover:text-orange-400 transition-colors">
+                <circle cx="11" cy="8" r="4" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M3 20c0-4.418 3.582-8 8-8s8 3.582 8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            )}
+          </div>
+          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center shadow">
+            <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M4.5 1.5v6M1.5 4.5h6" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          </div>
+          <input id="freelancerAvatar" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+        </label>
+        <div>
+          <p className="text-[13px] font-bold text-[#111]">Profile photo</p>
+          <p className="text-[11.5px] text-[#bbb] mt-0.5">JPG or PNG · optional</p>
+        </div>
+      </div>
+
+      {/* ── Smart Portfolio Builder ── */}
+      <div className="rounded-2xl border border-[#e8e8e8] overflow-hidden">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-extrabold text-gray-800 mb-2">
-            Register as Freelancer <span className="text-orange-500">RMGC</span>
-          </h1>
-          <p className="text-gray-500 text-sm">
-            Join the community of skilled freelancers and showcase your talent.
-          </p>
+        <div className="flex items-center gap-3 px-5 py-4 bg-[#fafafa] border-b border-[#f0f0f0]">
+          <div className="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center flex-shrink-0">
+            <FileText className="w-4 h-4 text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="text-[13px] font-black text-[#111]">Fill from your portfolio</p>
+            <p className="text-[11px] text-[#aaa] mt-0.5">
+              Share your CV or portfolio link and we'll fill in your bio, skills and services for you
+            </p>
+          </div>
+          {populated && (
+            <div className="flex items-center gap-1.5 bg-green-50 border border-green-100 px-2.5 py-1 rounded-full flex-shrink-0">
+              <CheckCircle2 className="w-3 h-3 text-green-500" />
+              <span className="text-[10px] font-bold text-green-600">Applied</span>
+            </div>
+          )}
         </div>
 
-        {/* Profile Upload */}
-        <div className="flex flex-col items-center mb-10">
-          <div className="relative w-32 h-32">
-            <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-orange-300 shadow-lg bg-orange-50 flex items-center justify-center">
-              {preview ? (
-                <Image
-                  src={preview}
-                  alt="Profile Preview"
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <Upload className="w-10 h-10 text-orange-400" />
+        <div className="px-5 py-4 flex flex-col gap-3">
+          {/* URL input */}
+          <div>
+            <Label>Portfolio or website URL</Label>
+            <div className="flex items-center gap-2 bg-white border border-[#e8e8e8] rounded-xl px-3.5 py-2.5 focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+              <Link2 className="w-3.5 h-3.5 text-[#ccc] flex-shrink-0" />
+              <input
+                type="url"
+                value={portfolioUrl}
+                onChange={(e) => setPortfolioUrl(e.target.value)}
+                placeholder="https://yourportfolio.com"
+                className="flex-1 bg-transparent outline-none text-[13.5px] text-[#111] placeholder:text-[#ccc]"
+              />
+              {portfolioUrl && (
+                <button type="button" onClick={() => setPortfolioUrl("")} className="text-[#ccc] hover:text-[#888]">
+                  <X className="w-3.5 h-3.5" />
+                </button>
               )}
             </div>
+          </div>
+
+          {/* File upload */}
+          <div>
+            <Label hint="PDF, DOCX, DOC">Or upload your CV / portfolio file</Label>
             <label
-              htmlFor="fileUpload"
-              className="absolute -bottom-2 right-2 bg-orange-500 hover:bg-orange-600 text-white text-xs px-3 py-1 rounded-full cursor-pointer shadow-md transition"
+              htmlFor="portfolioDoc"
+              className="flex items-center gap-2.5 bg-white border border-dashed border-[#e8e8e8] hover:border-orange-300 hover:bg-orange-50/40 rounded-xl px-3.5 py-3 cursor-pointer transition-all group"
             >
-              Upload
+              <FileUp className="w-4 h-4 text-[#ccc] group-hover:text-orange-400 flex-shrink-0 transition-colors" />
+              <div className="flex-1 min-w-0">
+                {portfolioFile ? (
+                  <p className="text-[12.5px] font-semibold text-orange-600 truncate">{portfolioFile.name}</p>
+                ) : (
+                  <p className="text-[12.5px] text-[#bbb]">Click to choose a file</p>
+                )}
+              </div>
+              {portfolioFile && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); setPortfolioFile(null); }}
+                  className="text-[#ccc] hover:text-red-400 flex-shrink-0"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <input
+                id="portfolioDoc"
+                type="file"
+                accept=".pdf,.docx,.doc,.ppt,.pptx,.txt"
+                className="hidden"
+                onChange={(e) => setPortfolioFile(e.target.files?.[0] || null)}
+              />
             </label>
+          </div>
+
+          {/* Error */}
+          {populateError && (
+            <p className="text-[11.5px] text-red-500 flex items-center gap-1.5">
+              <X className="w-3 h-3 shrink-0" /> {populateError}
+            </p>
+          )}
+
+          {/* CTA button */}
+          <button
+            type="button"
+            onClick={handlePopulate}
+            disabled={populating || (!portfolioUrl.trim() && !portfolioFile)}
+            className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-black tracking-wide transition-all ${
+              populated
+                ? "bg-green-500 hover:bg-green-600 text-white"
+                : "bg-[#0A0A0A] hover:bg-orange-500 text-white disabled:bg-[#f0f0f0] disabled:text-[#bbb] disabled:cursor-not-allowed"
+            }`}
+          >
+            {populating ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Reading your portfolio…</>
+            ) : populated ? (
+              <><CheckCircle2 className="w-4 h-4" /> Profile filled — run again to refresh</>
+            ) : (
+              <><Wand2 className="w-4 h-4" /> Fill my profile</>
+            )}
+          </button>
+
+          {populated && (
+            <p className="text-[11px] text-[#aaa] text-center -mt-1">
+              Fields marked <span className="text-green-500 font-bold">auto-filled</span> below were populated from your portfolio. You can edit them freely.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ── Basic Info ── */}
+      <div>
+        <SectionHead>Basic information</SectionHead>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <Label>Full name</Label>
+            <input name="fullName" type="text" placeholder="e.g. Emeka Obi" value={user.fullName} onChange={handleChange} className={inputCls} required />
+          </div>
+          <div>
+            <Label>Username</Label>
+            <input name="username" type="text" placeholder="e.g. emeka_dev" value={user.username} onChange={handleChange} className={inputCls} required />
+          </div>
+          <div>
+            <Label>Email</Label>
+            <input name="email" type="email" placeholder="you@example.com" value={user.email} onChange={handleChange} className={inputCls} required />
+          </div>
+          <div className="sm:col-span-2">
+            <Label hint="Min. 8 characters">Password</Label>
+            <div className="relative">
+              <input name="password" type={showPassword ? "text" : "password"} placeholder="••••••••" value={user.password} onChange={handleChange} className={`${inputCls} pr-10`} required />
+              <button type="button" onClick={() => setShowPassword((p) => !p)} className="absolute inset-y-0 right-3 flex items-center text-[#bbb] hover:text-[#666] transition">
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+          </div>
+          <div>
+            <Label hint="Must be 18+">Date of birth</Label>
+            <input name="dob" type="date" value={user.dob} onChange={handleChange} className={inputCls} required />
+          </div>
+          <div>
+            <Label>Phone</Label>
+            <input name="phone" type="text" placeholder="+234 800 000 0000" value={user.phone} onChange={handleChange} className={inputCls} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Location ── */}
+      <div>
+        <SectionHead>Location</SectionHead>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label>Country</Label>
+            <input name="country" type="text" placeholder="Nigeria" value={user.country} onChange={handleChange} className={inputCls} />
+          </div>
+          <div>
+            <Label>State of residence</Label>
+            <input name="stateOfResidence" type="text" placeholder="Lagos" value={user.stateOfResidence} onChange={handleChange} className={inputCls} />
+          </div>
+          <div className="sm:col-span-2">
+            <Label>Address</Label>
+            <input name="address" type="text" placeholder="123 Main Street, Ikeja" value={user.address} onChange={handleChange} className={inputCls} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Skills ── */}
+      <div>
+        <SectionHead>Skills & expertise</SectionHead>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Languages */}
+          <div>
+            <Label hint="Press Enter to add">Languages</Label>
             <input
-              id="fileUpload"
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
+              type="text"
+              value={langInput}
+              onChange={(e) => setLangInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); addTag(langInput, languages, setLanguages, setLangInput); }
+              }}
+              placeholder="e.g. English"
+              className={inputCls}
+            />
+            {languages.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {languages.map((t) => (
+                  <span key={t} className="inline-flex items-center gap-1 text-[11.5px] font-semibold bg-orange-50 text-orange-600 border border-orange-100 px-2.5 py-1 rounded-full">
+                    {t}
+                    <button type="button" onClick={() => removeTag(t, languages, setLanguages)} className="text-orange-400 hover:text-orange-600 leading-none">&times;</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Services */}
+          <div>
+            <Label hint="Press Enter to add" badge={autoFilled.has("services")}>Services</Label>
+            <input
+              type="text"
+              value={serviceInput}
+              onChange={(e) => setServiceInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); addTag(serviceInput, services, setServices, setServiceInput); }
+              }}
+              placeholder="e.g. UI Design"
+              className={inputCls}
+            />
+            {services.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {services.map((t) => (
+                  <span key={t} className="inline-flex items-center gap-1 text-[11.5px] font-semibold bg-[#f5f5f5] text-[#555] border border-[#ebebeb] px-2.5 py-1 rounded-full">
+                    {t}
+                    <button type="button" onClick={() => removeTag(t, services, setServices)} className="text-[#bbb] hover:text-[#555] leading-none">&times;</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Experience & Bio ── */}
+      <div>
+        <SectionHead>Experience</SectionHead>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label badge={autoFilled.has("yearsOfExperience")}>Years of experience</Label>
+            <input
+              name="yearsOfExperience"
+              type="number"
+              min="0"
+              placeholder="e.g. 3"
+              value={user.yearsOfExperience}
+              onChange={handleChange}
+              className={autoFilled.has("yearsOfExperience") ? inputFilledCls : inputCls}
             />
           </div>
-          <p className="text-gray-500 text-sm mt-2">
-            Upload a clear profile picture
-          </p>
-        </div>
-
-        {/* Fields */}
-        <div className="space-y-10">
-          {/* Basic Info */}
-          <section>
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              Basic Information
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <InputField
-                label="Full Name"
-                name="fullName"
-                onChange={handleChange}
-              />
-              <InputField
-                label="Username"
-                name="username"
-                onChange={handleChange}
-              />
-              <InputField
-                label="Email"
-                name="email"
-                type="email"
-                onChange={handleChange}
-              />
-
-              {/* Password */}
-              <div>
-                <label className="text-sm font-medium text-gray-700">
-                  Password
-                </label>
-                <div className="relative mt-1">
-                  <input
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter password"
-                    onChange={handleChange}
-                    className="mt-1 p-3 border rounded-lg w-full text-black placeholder-gray-500 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={togglePasswordVisibility}
-                    className="absolute inset-y-0 right-3 flex items-center"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-5 h-5 text-gray-500" />
-                    ) : (
-                      <Eye className="w-5 h-5 text-gray-500" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <InputField
-                label="Date of Birth"
-                name="dob"
-                type="date"
-                onChange={handleChange}
-              />
-              <InputField label="Phone" name="phone" onChange={handleChange} />
-            </div>
-          </section>
-
-          {/* Location */}
-          <section>
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              Location Details
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <InputField
-                label="Country"
-                name="country"
-                onChange={handleChange}
-              />
-              <InputField
-                label="State of Residence"
-                name="stateOfResidence"
-                onChange={handleChange}
-              />
-              <div className="md:col-span-2">
-                <InputField
-                  label="Address"
-                  name="address"
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Skills */}
-          <section>
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Skills</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <TagInput
-                label="Languages"
-                tags={languages}
-                onChange={handleLanguagesInput}
-                color="orange"
-              />
-              <TagInput
-                label="Services"
-                tags={services}
-                onChange={handleServicesInput}
-                color="green"
-              />
-            </div>
-          </section>
-
-          {/* Experience & Bio */}
-          <section>
-            <InputField
-              label="Years of Experience"
-              name="yearsOfExperience"
+          <div className="sm:col-span-2">
+            <Label hint="Max 300 chars" badge={autoFilled.has("desc")}>Short bio</Label>
+            <textarea
+              name="desc"
+              placeholder="Describe your background, specialties, and what makes you stand out…"
+              value={user.desc}
               onChange={handleChange}
+              className={autoFilled.has("desc") ? textareaFilledCls : textareaCls}
+              maxLength={300}
             />
-            <div className="mt-6">
-              <label className="text-sm font-medium text-gray-700">Bio</label>
-              <textarea
-                name="desc"
-                placeholder="Write a short bio about yourself"
-                onChange={handleChange}
-                className="mt-1 p-3 border rounded-lg w-full text-black placeholder-gray-500 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
-              />
-            </div>
-          </section>
-
-          {/* Next of Kin */}
-          <section>
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              Next of Kin
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <InputField
-                label="Full Name"
-                name="fullName"
-                onChange={handleNextOfKinChange}
-              />
-              <InputField
-                label="Phone"
-                name="phone"
-                onChange={handleNextOfKinChange}
-              />
-            </div>
-          </section>
+            <p className="text-[10.5px] text-[#ccc] text-right mt-1">{user.desc.length}/300</p>
+          </div>
         </div>
+      </div>
 
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-10 w-full py-4 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-lg shadow-lg transition-transform transform hover:scale-[1.02] disabled:opacity-50"
-        >
-          {loading ? "Registering..." : "Register & Login"}
-        </button>
-      </form>
-    </div>
+      {/* ── Next of Kin ── */}
+      <div>
+        <SectionHead>Next of kin</SectionHead>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <Label>Full name</Label>
+            <input name="fullName" type="text" placeholder="e.g. Ngozi Obi" value={user.nextOfKin.fullName} onChange={handleNextOfKinChange} className={inputCls} />
+          </div>
+          <div>
+            <Label>Phone</Label>
+            <input name="phone" type="text" placeholder="+234 800 000 0000" value={user.nextOfKin.phone} onChange={handleNextOfKinChange} className={inputCls} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Submit ── */}
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full py-3.5 bg-[#0A0A0A] hover:bg-orange-500 text-white text-[13.5px] font-black tracking-wide rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+      >
+        {loading ? (
+          <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Creating account…</>
+        ) : "Create freelancer account →"}
+      </button>
+    </form>
   );
 }
-
-/* Reusable Components */
-const InputField = ({ label, name, type = "text", onChange }: any) => (
-  <div>
-    <label className="text-sm font-medium text-gray-700">{label}</label>
-    <input
-      name={name}
-      type={type}
-      onChange={onChange}
-      className="mt-1 p-3 border rounded-lg w-full text-black placeholder-gray-500 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
-    />
-  </div>
-);
-
-const TagInput = ({ label, tags, onChange, color }: any) => (
-  <div>
-    <label className="text-sm font-medium text-gray-700">{label}</label>
-    <input
-      type="text"
-      placeholder="Type and separate with commas"
-      onChange={onChange}
-      className="mt-1 p-3 border rounded-lg w-full text-black placeholder-gray-500 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
-    />
-    <div className="flex flex-wrap gap-2 mt-2">
-      {tags.map((tag: string, i: number) => (
-        <span
-          key={i}
-          className={`bg-${color}-100 text-${color}-700 px-3 py-1 rounded-lg text-sm`}
-        >
-          {tag}
-        </span>
-      ))}
-    </div>
-  </div>
-);
-
-export default RegisterFreelancer;

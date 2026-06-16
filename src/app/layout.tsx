@@ -131,6 +131,10 @@ export default function RootLayout({
         `}
       </Script>
 
+      {/*  Start of HubSpot Embed Code  */}
+  {/* <Script type="text/javascript" id="hs-script-loader" async defer src="//js-eu1.hs-scripts.com/148700186.js"></Script> */}
+{/* <!-- End of HubSpot Embed Code --> */}
+
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${merriweather.variable} ${firaCode.variable} antialiased`}
       >

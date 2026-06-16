@@ -38,94 +38,59 @@ const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
     return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
 
-  // WAV / WaveSurfer
   useEffect(() => {
     if (fileExtension.toLowerCase() !== "wav" || !waveformRef.current) return;
-
     const wave = WaveSurfer.create({
       container: waveformRef.current,
-      waveColor: "#9CA3AF",
-      progressColor: "#22C55E",
-      cursorColor: "#FFFFFF",
+      waveColor: isSender ? "rgba(255,255,255,0.35)" : "#3A3A3A",
+      progressColor: isSender ? "#FFFFFF" : "#FF6B1A",
+      cursorColor: "transparent",
       barWidth: 2,
+      barGap: 1,
+      barRadius: 2,
       responsive: true,
-      height: 45,
+      height: 40,
     });
-
     waveSurferRef.current = wave;
     let isUnmounted = false;
-
-    const safeSetState = (fn: () => void) => {
-      if (!isUnmounted) fn();
-    };
-
+    const safe = (fn: () => void) => { if (!isUnmounted) fn(); };
     wave.load(src);
-
-    wave.on("ready", () =>
-      safeSetState(() => setDuration(formatTime(wave.getDuration())))
-    );
-    wave.on("audioprocess", () =>
-      safeSetState(() => {
-        setCurrentTime(formatTime(wave.getCurrentTime()));
-        setProgress((wave.getCurrentTime() / wave.getDuration()) * 100);
-      })
-    );
-    wave.on("finish", () =>
-      safeSetState(() => {
-        setIsPlaying(false);
-        setProgress(0);
-      })
-    );
-
+    wave.on("ready", () => safe(() => setDuration(formatTime(wave.getDuration()))));
+    wave.on("audioprocess", () => safe(() => {
+      setCurrentTime(formatTime(wave.getCurrentTime()));
+      setProgress((wave.getCurrentTime() / wave.getDuration()) * 100);
+    }));
+    wave.on("finish", () => safe(() => { setIsPlaying(false); setProgress(0); }));
     return () => {
       isUnmounted = true;
       if (waveSurferRef.current) {
-        try {
-          waveSurferRef.current.empty(); // cancel pending audio decode
-          waveSurferRef.current.destroy();
-        } catch (err) {
-          console.warn("WaveSurfer destroy skipped due to abort:", err);
-        }
+        try { waveSurferRef.current.empty(); waveSurferRef.current.destroy(); } catch { }
         waveSurferRef.current = null;
       }
     };
-  }, [fileExtension, src]);
+  }, [fileExtension, src, isSender]);
 
-  // Standard audio
   useEffect(() => {
     if (fileExtension.toLowerCase() === "wav") return;
     const audio = audioRef.current;
     if (!audio) return;
-
     const updateProgress = () => {
       if (!isNaN(audio.duration)) {
         setProgress((audio.currentTime / audio.duration) * 100);
         setCurrentTime(formatTime(audio.currentTime));
       }
     };
-
-    const handleLoadedMetadata = () => {
-      if (!isNaN(audio.duration)) setDuration(formatTime(audio.duration));
-    };
-
+    const handleLoadedMetadata = () => { if (!isNaN(audio.duration)) setDuration(formatTime(audio.duration)); };
     const handlePlay = () => {
-      if (currentlyPlayingAudio && currentlyPlayingAudio !== audio) {
-        (currentlyPlayingAudio as HTMLAudioElement).pause();
-      }
+      if (currentlyPlayingAudio && currentlyPlayingAudio !== audio) (currentlyPlayingAudio as HTMLAudioElement).pause();
       currentlyPlayingAudio = audio;
       setIsPlaying(true);
     };
-
-    const handlePause = () => {
-      if (currentlyPlayingAudio === audio) currentlyPlayingAudio = null;
-      setIsPlaying(false);
-    };
-
+    const handlePause = () => { if (currentlyPlayingAudio === audio) currentlyPlayingAudio = null; setIsPlaying(false); };
     audio.addEventListener("timeupdate", updateProgress);
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
     audio.addEventListener("play", handlePlay);
     audio.addEventListener("pause", handlePause);
-
     return () => {
       audio.removeEventListener("timeupdate", updateProgress);
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
@@ -137,44 +102,31 @@ const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
   const togglePlay = () => {
     if (fileExtension.toLowerCase() === "wav" && waveSurferRef.current) {
       try {
-        if (
-          currentlyPlayingAudio &&
-          currentlyPlayingAudio !== waveSurferRef.current
-        ) {
+        if (currentlyPlayingAudio && currentlyPlayingAudio !== waveSurferRef.current)
           (currentlyPlayingAudio as WaveSurfer).pause();
-        }
         currentlyPlayingAudio = waveSurferRef.current;
-        isPlaying
-          ? waveSurferRef.current.pause()
-          : waveSurferRef.current.play();
+        isPlaying ? waveSurferRef.current.pause() : waveSurferRef.current.play();
         setIsPlaying(!isPlaying);
-      } catch (err) {
-        console.warn("WaveSurfer play/pause error:", err);
-      }
+      } catch (err) { console.warn(err); }
       return;
     }
-
     const audio = audioRef.current;
     if (!audio) return;
-
     if (currentlyPlayingAudio && currentlyPlayingAudio !== audio) {
       (currentlyPlayingAudio as HTMLAudioElement).pause();
       (currentlyPlayingAudio as HTMLAudioElement).currentTime = 0;
     }
     currentlyPlayingAudio = audio;
-
     isPlaying ? audio.pause() : audio.play();
   };
 
   const handleSeek = (e: MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const newTime = (e.clientX - rect.left) / rect.width;
-
+    const ratio = (e.clientX - rect.left) / rect.width;
     if (fileExtension.toLowerCase() === "wav") {
-      waveSurferRef.current?.seekTo(newTime);
+      waveSurferRef.current?.seekTo(ratio);
     } else {
-      if (audioRef.current)
-        audioRef.current.currentTime = newTime * audioRef.current.duration;
+      if (audioRef.current) audioRef.current.currentTime = ratio * audioRef.current.duration;
     }
   };
 
@@ -183,67 +135,130 @@ const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
     localStorage.setItem(`downloaded-${fileName}`, "true");
   };
 
+  const senderBg = "linear-gradient(135deg, #FF6B1A 0%, #E85D0A 100%)";
+  const receiverBg = "#1E1E1E";
+
   return (
     <div
-      className={`flex flex-col gap-2 p-3 rounded-lg w-full min-w-[208px] max-w-sm md:max-w-md ${
-        isSender ? "bg-green-600" : "bg-gray-800"
-      }`}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
+        padding: "10px 12px",
+        borderRadius: "14px",
+        width: "100%",
+        minWidth: "220px",
+        maxWidth: "340px",
+        background: isSender ? senderBg : receiverBg,
+        boxShadow: isSender
+          ? "0 2px 16px rgba(255, 107, 26, 0.3)"
+          : "0 2px 8px rgba(0,0,0,0.3)",
+      }}
     >
       {fileExtension.toLowerCase() !== "wav" && (
-        <audio
-          ref={audioRef}
-          src={src}
-          type={`audio/${fileExtension}`}
-          className="hidden"
-        />
+        <audio ref={audioRef} src={src} className="hidden" />
       )}
 
-      <div className="flex items-center gap-3">
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        {/* Play button */}
         <button
           onClick={togglePlay}
-          className="text-white p-2 rounded-full bg-green-500 md:p-3 hover:bg-green-400 transition"
+          style={{
+            width: "38px",
+            height: "38px",
+            borderRadius: "50%",
+            border: "none",
+            background: isSender ? "rgba(255,255,255,0.2)" : "#FF6B1A",
+            color: "#fff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            flexShrink: 0,
+            transition: "background 0.2s, transform 0.15s",
+            boxShadow: isSender ? "none" : "0 2px 10px rgba(255,107,26,0.4)",
+          }}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.transform = "scale(1.08)")}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.transform = "scale(1)")}
         >
-          {isPlaying ? (
-            <FaPause className="text-lg md:text-xl" />
-          ) : (
-            <FaPlay className="text-lg md:text-xl" />
-          )}
+          {isPlaying ? <FaPause size={13} /> : <FaPlay size={13} style={{ marginLeft: "2px" }} />}
         </button>
 
-        <span className="text-white text-sm md:text-base">{currentTime}</span>
+        <span style={{ color: isSender ? "rgba(255,255,255,0.75)" : "#9CA3AF", fontSize: "11px", flexShrink: 0, minWidth: "34px" }}>
+          {currentTime}
+        </span>
 
+        {/* Waveform or progress bar */}
         {fileExtension.toLowerCase() === "wav" ? (
-          <div ref={waveformRef} className="flex-1" />
+          <div ref={waveformRef} style={{ flex: 1 }} />
         ) : (
           <div
-            className="relative flex-1 h-1 bg-gray-600 rounded-full overflow-hidden cursor-pointer"
+            style={{
+              position: "relative",
+              flex: 1,
+              height: "4px",
+              background: isSender ? "rgba(255,255,255,0.25)" : "#2A2A2A",
+              borderRadius: "2px",
+              cursor: "pointer",
+            }}
             onClick={handleSeek}
           >
             <div
-              className="h-full bg-green-500 transition-all duration-200"
-              style={{ width: `${progress}%` }}
+              style={{
+                height: "100%",
+                width: `${progress}%`,
+                background: isSender ? "#FFFFFF" : "linear-gradient(90deg, #FF6B1A, #FF8C47)",
+                borderRadius: "2px",
+                transition: "width 0.15s linear",
+              }}
             />
             <div
-              className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-green-500 rounded-full cursor-pointer"
-              style={{ left: `calc(${progress}% - 6px)` }}
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: `${progress}%`,
+                transform: "translate(-50%, -50%)",
+                width: "12px",
+                height: "12px",
+                borderRadius: "50%",
+                background: isSender ? "#FFFFFF" : "#FF6B1A",
+                boxShadow: "0 0 4px rgba(0,0,0,0.3)",
+              }}
             />
           </div>
         )}
 
-        {fileExtension.toLowerCase() !== "wav" && (
-          <span className="text-white text-sm md:text-base">{duration}</span>
-        )}
+        <span style={{ color: isSender ? "rgba(255,255,255,0.75)" : "#9CA3AF", fontSize: "11px", flexShrink: 0, minWidth: "34px", textAlign: "right" }}>
+          {duration}
+        </span>
       </div>
 
+      {/* Download */}
       {!isSender && !downloaded && fileExtension.toLowerCase() !== "wav" && (
         <a
           href={src}
           download={fileName}
           onClick={handleDownload}
-          className="flex items-center justify-center gap-2 text-white bg-green-500 py-1 px-3 rounded-md text-sm md:text-base md:py-2 md:px-4 hover:bg-green-400 transition"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "6px",
+            background: "#FF6B1A",
+            color: "#fff",
+            padding: "6px 14px",
+            borderRadius: "8px",
+            fontSize: "12px",
+            fontWeight: 600,
+            textDecoration: "none",
+            transition: "background 0.2s",
+            marginTop: "2px",
+          }}
+          onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.background = "#E85D0A")}
+          onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.background = "#FF6B1A")}
         >
-          <FaDownload />
-          Download
+          <FaDownload size={11} />
+          Save audio
         </a>
       )}
     </div>

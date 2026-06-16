@@ -9,58 +9,106 @@ import ReactECharts from "echarts-for-react";
 import newRequest from "../utils/newRequest";
 import { useExchangeRate } from "../hooks/useExchangeRate";
 import Image from "next/image";
-import SellerNavbar from "./components/navbar";
 import Footer from "../components/footer";
 import Skeleton from "react-loading-skeleton";
+// @ts-ignore: side-effect import for Skeleton styles
 import "react-loading-skeleton/dist/skeleton.css";
-import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
+import {
+  ExclamationCircleIcon,
+  PencilSquareIcon,
+  ArrowTopRightOnSquareIcon,
+  MapPinIcon,
+  BriefcaseIcon,
+  SparklesIcon,
+  CheckBadgeIcon,
+  ClockIcon,
+} from "@heroicons/react/24/outline";
 
-const FloatingCircle = ({
-  size,
-  color,
-  duration,
-  delay,
-  top,
-  left,
+type RevenueEntry = { title: string; totalRevenue: number };
+type MonthlyEntry = { month: string; totalRevenue: number };
+
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+const StatCard = ({
+  label,
+  value,
+  sub,
+  accent = false,
 }: {
-  size: number;
-  color: string;
-  duration: number;
-  delay: number;
-  top: string;
-  left: string;
+  label: string;
+  value: string | number;
+  sub?: string;
+  accent?: boolean;
 }) => (
-  <motion.div
-    className="absolute overflow-hidden rounded-full blur-[60px] opacity-70"
-    style={{
-      width: size,
-      height: size,
-      background: color,
-      top,
-      left,
-      boxShadow: `0 0 80px ${color}`,
-    }}
-    animate={{
-      x: [0, 100, -80, 120, -60, 0],
-      y: [0, -100, 60, -120, 80, 0],
-      rotate: [0, 45, 90, 135, 180, 225, 270, 360],
-      scale: [1, 1.1, 0.95, 1.05, 1],
-      opacity: [0.7, 1, 0.85, 1],
-    }}
-    transition={{
-      duration,
-      repeat: Infinity,
-      repeatType: "mirror",
-      delay,
-      ease: "easeInOut",
-    }}
-  />
+  <div
+    className={`flex flex-col gap-1 rounded-2xl px-5 py-4 border transition-all duration-200 ${
+      accent
+        ? "bg-[#f97316] border-[#f97316] text-white"
+        : "bg-white border-neutral-200 text-neutral-900"
+    }`}
+  >
+    <span
+      className={`text-[10px] font-bold uppercase tracking-widest ${
+        accent ? "text-orange-100" : "text-neutral-400"
+      }`}
+    >
+      {label}
+    </span>
+    <span className="text-2xl font-black leading-none mt-1 tracking-tight">
+      {value}
+    </span>
+    {sub && (
+      <span
+        className={`text-[11px] mt-0.5 ${
+          accent ? "text-orange-100" : "text-neutral-400"
+        }`}
+      >
+        {sub}
+      </span>
+    )}
+  </div>
 );
 
+// ─── Section Header ───────────────────────────────────────────────────────────
+const SectionHeader = ({
+  title,
+  action,
+}: {
+  title: string;
+  action?: React.ReactNode;
+}) => (
+  <div className="flex items-center justify-between mb-5">
+    <h2 className="text-[13px] font-bold text-neutral-900 tracking-tight flex items-center gap-2.5 uppercase">
+      <span className="block w-1 h-4 rounded-full bg-[#f97316]" />
+      {title}
+    </h2>
+    {action}
+  </div>
+);
+
+// ─── Panel ────────────────────────────────────────────────────────────────────
+const Panel = ({
+  children,
+  className = "",
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+}) => (
+  <motion.section
+    initial={{ opacity: 0, y: 16 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.4, delay, ease: [0.22, 1, 0.36, 1] }}
+    className={`bg-white border border-neutral-200 rounded-2xl p-5 md:p-6 ${className}`}
+  >
+    {children}
+  </motion.section>
+);
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 const SellerDashboard = () => {
   const router = useRouter();
 
-  // Fetch user profile
   const {
     data: user,
     isLoading: userLoading,
@@ -73,12 +121,10 @@ const SellerDashboard = () => {
     },
   });
 
-  // Currency setup
   const { currencySymbol, convertPrice, countryCurrency } = useExchangeRate(
-    user?.country
+    user?.country,
   );
 
-  // Fetch orders
   const {
     data: orders = [],
     isLoading: ordersLoading,
@@ -91,7 +137,6 @@ const SellerDashboard = () => {
     },
   });
 
-  // Fetch gigs
   const {
     data: gigs = [],
     isLoading: gigsLoading,
@@ -105,510 +150,588 @@ const SellerDashboard = () => {
     },
   });
 
-  const [revenueData, setRevenueData] = useState([]);
+  const [revenueData, setRevenueData] = useState([] as RevenueEntry[]);
   const [totalRevenueAllGigs, setTotalRevenueAllGigs] = useState(0);
-  const [monthlyEarnings, setMonthlyEarnings] = useState([]);
+  const [monthlyEarnings, setMonthlyEarnings] = useState([] as MonthlyEntry[]);
 
-  // Fetch seller revenue data
   useEffect(() => {
     const fetchRevenueData = async () => {
       try {
         const { data } = await newRequest.get("/orders/seller-revenue");
         setRevenueData(data.revenueData);
         setTotalRevenueAllGigs(data.totalRevenueAllGigs);
-
-        const monthly = data.monthlyEarnings.map((entry) => ({
-          month: entry.month,
-          totalRevenue: parseFloat(entry.totalRevenue),
-        }));
-
-        setMonthlyEarnings(monthly);
+        setMonthlyEarnings(
+          data.monthlyEarnings.map((entry: any) => ({
+            month: entry.month,
+            totalRevenue: parseFloat(entry.totalRevenue),
+          })),
+        );
       } catch (error) {
         console.error("Error fetching revenue data:", error);
       }
     };
-
     fetchRevenueData();
   }, []);
 
-  // ====== ECHART CONFIGS ======
-  const barOption = {
+  // ─── Chart base ───────────────────────────────────────────────────────────
+  const chartBase = {
     backgroundColor: "transparent",
-    title: {
-      text: "Revenue Per Gig",
-      left: "center",
-      textStyle: { color: "#333" },
+    grid: {
+      left: "2%",
+      right: "2%",
+      bottom: "4%",
+      top: "4%",
+      containLabel: true,
     },
     tooltip: {
+      backgroundColor: "#fff",
+      borderColor: "#e5e5e5",
+      borderWidth: 1,
+      textStyle: { color: "#171717", fontSize: 12 },
+      extraCssText:
+        "box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-radius: 10px; padding: 8px 12px;",
+    },
+  };
+
+  const barOption = {
+    ...chartBase,
+    tooltip: {
+      ...chartBase.tooltip,
       trigger: "axis",
       axisPointer: { type: "shadow" },
-      backgroundColor: "#fff",
-      borderColor: "#f97316",
-      borderWidth: 1,
-      textStyle: { color: "#333" },
-      formatter: (params) =>
-        `${
-          params[0].name
-        }: ${currencySymbol}${params[0].value.toLocaleString()}`,
+      formatter: (params: any) =>
+        `<strong>${params[0].name}</strong><br/>${currencySymbol}${params[0].value.toLocaleString()}`,
     },
-    grid: { left: "3%", right: "3%", bottom: "5%", containLabel: true },
     xAxis: {
       type: "category",
-      data: revenueData.map((gig) => gig.title),
-      axisLabel: { rotate: 25, color: "#555", fontSize: 12 },
+      data: revenueData.map((g) => g.title),
+      axisLabel: { rotate: 20, color: "#a3a3a3", fontSize: 11 },
+      axisLine: { lineStyle: { color: "#f0f0f0" } },
+      axisTick: { show: false },
     },
-    yAxis: { type: "value", axisLabel: { color: "#555" } },
+    yAxis: {
+      type: "value",
+      axisLabel: { color: "#a3a3a3", fontSize: 11 },
+      splitLine: { lineStyle: { color: "#f5f5f5", type: "dashed" } },
+    },
     series: [
       {
-        data: revenueData.map((gig) => gig.totalRevenue),
+        data: revenueData.map((g) => g.totalRevenue),
         type: "bar",
+        barMaxWidth: 36,
         itemStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
             { offset: 0, color: "#f97316" },
-            { offset: 1, color: "#fdba74" },
+            { offset: 1, color: "#fed7aa" },
           ]),
-          borderRadius: [8, 8, 0, 0],
-          shadowBlur: 6,
-          shadowColor: "rgba(0,0,0,0.15)",
+          borderRadius: [5, 5, 0, 0],
         },
+        emphasis: { itemStyle: { color: "#ea6600" } },
       },
     ],
   };
 
   const lineOption = {
-    backgroundColor: "transparent",
-    title: {
-      text: "Monthly Earnings Trend",
-      left: "center",
-      textStyle: { color: "#333" },
-    },
+    ...chartBase,
     tooltip: {
+      ...chartBase.tooltip,
       trigger: "axis",
-      backgroundColor: "#fff",
-      borderColor: "#f97316",
-      borderWidth: 1,
-      textStyle: { color: "#333" },
-      formatter: (params) =>
-        `${
-          params[0].axisValue
-        }: ${currencySymbol}${params[0].value.toLocaleString()}`,
+      formatter: (params: any) =>
+        `<strong>${params[0].axisValue}</strong><br/>${currencySymbol}${params[0].value.toLocaleString()}`,
     },
     xAxis: {
       type: "category",
       data: monthlyEarnings.map((m) => m.month),
       boundaryGap: false,
-      axisLine: { lineStyle: { color: "#ccc" } },
-      axisLabel: { color: "#666" },
+      axisLabel: { color: "#a3a3a3", fontSize: 11 },
+      axisLine: { lineStyle: { color: "#f0f0f0" } },
+      axisTick: { show: false },
     },
-    yAxis: { type: "value", axisLabel: { color: "#666" } },
+    yAxis: {
+      type: "value",
+      axisLabel: { color: "#a3a3a3", fontSize: 11 },
+      splitLine: { lineStyle: { color: "#f5f5f5", type: "dashed" } },
+    },
     series: [
       {
         data: monthlyEarnings.map((e) => e.totalRevenue),
         type: "line",
         smooth: true,
-        lineStyle: { color: "#f97316", width: 4 },
+        lineStyle: { color: "#f97316", width: 2.5 },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: "rgba(249, 115, 22, 0.5)" },
-            { offset: 1, color: "rgba(249, 115, 22, 0)" },
+            { offset: 0, color: "rgba(249,115,22,0.15)" },
+            { offset: 1, color: "rgba(249,115,22,0)" },
           ]),
         },
         symbol: "circle",
-        symbolSize: 10,
-        itemStyle: { color: "#fb923c" },
+        symbolSize: 7,
+        itemStyle: { color: "#f97316", borderWidth: 2, borderColor: "#fff" },
       },
     ],
   };
 
   const donutOption = {
-    title: {
-      text: "Revenue Distribution",
-      subtext: `${currencySymbol}${new Intl.NumberFormat().format(
-        totalRevenueAllGigs
-      )}`,
-      left: "center",
-      top: 10,
-      textStyle: { color: "#333" },
-    },
+    ...chartBase,
     tooltip: {
+      ...chartBase.tooltip,
       trigger: "item",
-      formatter: (params) =>
-        `${params.name}: ${currencySymbol}${params.value.toLocaleString()} (${
-          params.percent
-        }%)`,
+      formatter: (params: any) =>
+        `${params.name}<br/>${currencySymbol}${params.value.toLocaleString()} <span style="color:#a3a3a3">(${params.percent}%)</span>`,
     },
-    legend: { bottom: 0, textStyle: { color: "#555" } },
+    legend: { show: false },
     series: [
       {
         name: "Gig Revenue",
         type: "pie",
-        radius: ["45%", "70%"],
-        itemStyle: { borderRadius: 8, borderColor: "#fff", borderWidth: 2 },
-        data: revenueData.map((gig) => ({
-          name: gig.title,
-          value: gig.totalRevenue,
+        radius: ["48%", "70%"],
+        center: ["50%", "50%"],
+        itemStyle: { borderRadius: 5, borderColor: "#fff", borderWidth: 3 },
+        label: { show: false },
+        data: revenueData.map((g) => ({
+          name: g.title,
+          value: g.totalRevenue,
         })),
       },
     ],
-    color: ["#f97316", "#06b6d4", "#8b5cf6", "#10b981", "#ef4444", "#eab308"],
+    color: ["#f97316", "#0ea5e9", "#8b5cf6", "#10b981", "#ef4444", "#eab308"],
   };
 
-  const handleEdit = () => router.push("/seller/profile-edit");
+  // ─── Loading ──────────────────────────────────────────────────────────────
   if (userLoading || gigsLoading || ordersLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-6 p-6">
-        {/* Blurred background version of dashboard */}
-        <div className="absolute inset-0 bg-gray-100 blur-lg opacity-30 z-0"></div>
-
-        {/* Foreground loading card */}
-        <div className="relative z-10 w-full max-w-6xl bg-white p-8 rounded-2xl shadow-xl">
-          <div className="flex flex-col gap-4">
-            <Skeleton height={40} width={220} />
-            <Skeleton height={24} count={2} />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-            <Skeleton height={140} className="rounded-xl animate-pulse-fast" />
-            <Skeleton height={140} className="rounded-xl animate-pulse-fast" />
-            <Skeleton height={140} className="rounded-xl animate-pulse-fast" />
-          </div>
+      <div className="min-h-screen bg-[#fafafa] p-6 space-y-5">
+        <Skeleton height={28} width={180} borderRadius={8} />
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} height={90} borderRadius={16} />
+          ))}
         </div>
-
-        <p className="text-gray-500 text-sm relative z-10">
-          Loading your dashboard...
-        </p>
+        <Skeleton height={300} borderRadius={16} />
+        <Skeleton height={300} borderRadius={16} />
       </div>
     );
   }
 
+  // ─── Error ────────────────────────────────────────────────────────────────
   if (userError || gigsError || ordersError) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="max-w-md w-full p-8 bg-red-50 border border-red-200 rounded-xl shadow-xl text-center animate-fadeIn">
-          <ExclamationCircleIcon className="mx-auto h-12 w-12 text-red-500 mb-4" />
-          <h2 className="text-xl font-semibold text-red-700 mb-2">
-            Oops! Something went wrong
+      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center p-6">
+        <div className="max-w-xs w-full text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center mx-auto">
+            <ExclamationCircleIcon className="w-6 h-6 text-red-500" />
+          </div>
+          <h2 className="text-base font-bold text-neutral-900">
+            Something went wrong
           </h2>
-          <p className="text-red-500 text-sm">
-            We couldn’t load your dashboard data. Try refreshing or check back
-            later.
+          <p className="text-sm text-neutral-400">
+            We couldn&apos;t load your dashboard. Try refreshing.
           </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 bg-[#f97316] text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-orange-600 transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
   }
 
-  const circles = [
-    {
-      size: 260,
-      color: "rgba(255, 165, 0, 0.12)",
-      duration: 10,
-      delay: 0,
-      top: "10%",
-      left: "10%",
-    },
-    {
-      size: 200,
-      color: "rgba(255, 180, 80, 0.1)",
-      duration: 11,
-      delay: 1,
-      top: "25%",
-      left: "60%",
-    },
-    {
-      size: 280,
-      color: "rgba(255, 200, 120, 0.1)",
-      duration: 9,
-      delay: 1.5,
-      top: "55%",
-      left: "35%",
-    },
-    {
-      size: 220,
-      color: "rgba(255, 255, 255, 0.08)",
-      duration: 12,
-      delay: 2,
-      top: "70%",
-      left: "5%",
-    },
-    {
-      size: 240,
-      color: "rgba(255, 170, 70, 0.1)",
-      duration: 10,
-      delay: 2.5,
-      top: "80%",
-      left: "45%",
-    },
-    {
-      size: 180,
-      color: "rgba(255, 140, 0, 0.1)",
-      duration: 9,
-      delay: 3,
-      top: "15%",
-      left: "75%",
-    },
-    {
-      size: 200,
-      color: "rgba(255, 255, 255, 0.06)",
-      duration: 13,
-      delay: 3.5,
-      top: "60%",
-      left: "65%",
-    },
-    {
-      size: 240,
-      color: "rgba(255, 200, 100, 0.1)",
-      duration: 10,
-      delay: 4,
-      top: "40%",
-      left: "25%",
-    },
+  // ─── Derived ──────────────────────────────────────────────────────────────
+  const completedOrders =
+    orders?.sellerOrders?.filter((o: any) => o.isCompleted) ?? [];
+  const pendingOrders =
+    orders?.sellerOrders?.filter((o: any) => !o.isCompleted) ?? [];
+
+  const palette = [
+    "#f97316",
+    "#0ea5e9",
+    "#8b5cf6",
+    "#10b981",
+    "#ef4444",
+    "#eab308",
   ];
 
   return (
-    <>
-      <SellerNavbar />
-      <div className="min-h-screen flex flex-col gap-10 p-8 md:p-12 bg-gradient-to-br from-orange-100 via-white to-orange-50 overflow-hidden relative">
-        <div className="absolute inset-0 bottom-[-150px] overflow-visible z-[2] pointer-events-none">
-          {circles.map((circle, index) => (
-            <FloatingCircle key={index} {...circle} />
-          ))}
-        </div>
-
-        {/* === PROFILE SECTION === */}
+    <div className="min-h-screen bg-[#fafafa]">
+      <div className="px-5 md:px-8 py-7 space-y-5 max-w-[1200px]">
+        {/* ── Page title ── */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="relative border border-orange-100 rounded-3xl shadow-lg p-8 bg-white/60 backdrop-blur-2xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
+          transition={{ duration: 0.35 }}
+          className="flex items-center justify-between"
         >
-          <h2 className="text-3xl font-bold mb-6 text-orange-700 tracking-tight flex items-center gap-2">
-            👋 Welcome, {user?.username || "Seller"}
-          </h2>
-
-          <div className="flex flex-wrap gap-8 items-center">
-            <div className="relative w-32 h-32">
-              <Image
-                src={
-                  user?.img ||
-                  "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
-                }
-                alt="Profile"
-                fill
-                sizes="128px"
-                className="rounded-full object-cover ring-4 ring-orange-300/60 shadow-md hover:ring-orange-400 transition-all duration-300"
-              />
-              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-orange-300/30 to-transparent blur-lg animate-pulse"></div>
-            </div>
-
-            <div className="space-y-2 text-gray-700">
-              <p>
-                <strong>Bio:</strong> {user.desc || "No bio yet."}
-              </p>
-              <p>
-                <strong>Country:</strong> {user.country}
-              </p>
-              <p>
-                <strong>Experience:</strong> {user.yearsOfExperience || 0}
-              </p>
-              <p>
-                <strong>Services:</strong> {user.services || "N/A"}
-              </p>
-              <button
-                onClick={handleEdit}
-                className="text-orange-600 mt-3 font-medium hover:underline hover:text-orange-700 transition"
-              >
-                ✏️ Edit Profile
-              </button>
-            </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#f97316] mb-0.5">
+              Overview
+            </p>
+            <h1 className="text-2xl font-black tracking-tight text-neutral-900">
+              {user?.username || "Dashboard"}
+            </h1>
           </div>
+          <button
+            onClick={() => router.push("/seller/profile-edit")}
+            className="hidden sm:inline-flex items-center gap-1.5 text-[12px] font-semibold border border-neutral-200 bg-white px-3.5 py-2 rounded-xl hover:border-[#f97316] hover:text-[#f97316] transition-colors"
+          >
+            <PencilSquareIcon className="w-3.5 h-3.5" />
+            Edit profile
+          </button>
         </motion.div>
 
-        {/** Bar Chart Section **/}
-
+        {/* ── Stat cards ── */}
         <motion.div
-          initial={{ opacity: 0, y: 25 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="flex flex-col gap-4 bg-white/90 backdrop-blur-xl p-6 rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-orange-100"
+          transition={{ duration: 0.35, delay: 0.04 }}
+          className="grid grid-cols-2 xl:grid-cols-4 gap-3"
         >
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-semibold text-gray-800 border-l-4 border-orange-400 pl-3">
-              Revenue Per Gig
-            </h3>
-          </div>
-
-          <div className="overflow-x-auto">
-            <div className="min-w-[600px]">
-              <ReactECharts
-                option={barOption}
-                style={{ height: "420px", width: "100%" }}
-                onChartReady={(chart) => {
-                  window.addEventListener("resize", () => chart.resize());
-                }}
-              />
-            </div>
-          </div>
+          <StatCard
+            label="Total revenue"
+            value={`${currencySymbol}${new Intl.NumberFormat().format(
+              totalRevenueAllGigs,
+            )}`}
+            sub={countryCurrency}
+            accent
+          />
+          <StatCard
+            label="Active gigs"
+            value={gigs.length}
+            sub="listed services"
+          />
+          <StatCard
+            label="Completed"
+            value={completedOrders.length}
+            sub="orders fulfilled"
+          />
+          <StatCard
+            label="Pending"
+            value={pendingOrders.length}
+            sub="awaiting completion"
+          />
         </motion.div>
 
-        {/** Line Chart Section **/}
-        <motion.div
-          initial={{ opacity: 0, y: 25 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="flex flex-col gap-4 bg-white/90 backdrop-blur-xl p-6 rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-orange-100"
-        >
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-semibold text-gray-800 border-l-4 border-orange-400 pl-3">
-              Monthly Earnings Trend
-            </h3>
-          </div>
+        {/* ── Profile ── */}
+       <Panel delay={0.08}>
+  <SectionHeader
+    title="Profile"
+    action={
+      <button
+        onClick={() => router.push("/seller/profile-edit")}
+        className="sm:hidden text-[11px] font-semibold text-[#f97316] flex items-center gap-1"
+      >
+        <PencilSquareIcon className="w-3 h-3" />
+        Edit
+      </button>
+    }
+  />
 
-          <div className="overflow-x-auto">
-            <div className="min-w-[600px]">
-              <ReactECharts
-                option={lineOption}
-                style={{ height: "420px", width: "100%" }}
-                onChartReady={(chart) => {
-                  window.addEventListener("resize", () => chart.resize());
-                }}
-              />
-            </div>
-          </div>
-        </motion.div>
+  {/* Avatar + name row */}
+  <div className="flex items-center gap-4 mb-4">
+    <div className="relative shrink-0">
+      <div className="w-14 h-14 rounded-xl overflow-hidden ring-1 ring-neutral-100">
+        <Image
+          src={
+            user?.img ||
+            "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
+          }
+          alt={user?.username || "Profile"}
+          width={56}
+          height={56}
+          className="object-cover w-full h-full"
+        />
+      </div>
+      <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-400 border-2 border-white rounded-full" />
+    </div>
 
-        {/** Donut Chart Section **/}
-        <motion.div
-          initial={{ opacity: 0, y: 25 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="flex flex-col gap-6 bg-white/90 backdrop-blur-xl p-8 rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-orange-100"
-        >
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-semibold text-gray-800 border-l-4 border-orange-400 pl-3">
-              Revenue Distribution
-            </h3>
-          </div>
+    <div className="min-w-0">
+      <h3 className="text-[15px] font-bold text-neutral-900 leading-tight truncate">
+        {user?.username}
+      </h3>
+      <div className="flex flex-wrap gap-1.5 mt-1.5">
+        {user?.country && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-md">
+            <MapPinIcon className="w-3 h-3 shrink-0" />
+            {user.country}
+          </span>
+        )}
+        {(user?.yearsOfExperience ?? 0) > 0 && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-md">
+            <BriefcaseIcon className="w-3 h-3 shrink-0" />
+            {user.yearsOfExperience}yr exp.
+          </span>
+        )}
+      </div>
+    </div>
+  </div>
 
-          <div className="overflow-x-auto w-full">
-            <div className="min-w-[600px] flex flex-col md:flex-row items-center justify-center gap-6">
-              <div className="w-full md:w-3/5">
+  {/* Bio — full width, no clamp */}
+  {user?.desc ? (
+    <p className="text-[12.5px] text-neutral-500 leading-relaxed mb-4 whitespace-pre-line break-words">
+      {user.desc}
+    </p>
+  ) : (
+    <p className="text-[12px] text-neutral-300 italic mb-4">No bio added yet.</p>
+  )}
+
+  {/* Services — wrapping pills */}
+  {user?.services && user.services.length > 0 && (
+    <div className="flex flex-wrap gap-1.5">
+      {(Array.isArray(user.services) ? user.services : [user.services]).map(
+        (s: string, i: number) => (
+          <span
+            key={i}
+            className="inline-flex items-center gap-1 text-[11px] font-medium bg-orange-50 text-[#f97316] px-2.5 py-1 rounded-lg"
+          >
+            <SparklesIcon className="w-3 h-3 shrink-0" />
+            {s}
+          </span>
+        )
+      )}
+    </div>
+  )}
+</Panel>
+
+        {/* ── Charts ── */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+          <Panel delay={0.12}>
+            <SectionHeader title="Revenue per gig" />
+            <div className="overflow-x-auto">
+              <div className="min-w-[320px]">
                 <ReactECharts
-                  option={{
-                    ...donutOption,
-                    legend: {
-                      ...donutOption.legend,
-                      show: false,
-                    },
-                  }}
-                  style={{ height: "520px", width: "100%" }}
+                  option={barOption}
+                  style={{ height: "260px", width: "100%" }}
                   onChartReady={(chart) => {
                     window.addEventListener("resize", () => chart.resize());
                   }}
                 />
               </div>
             </div>
-          </div>
-        </motion.div>
+          </Panel>
 
-        {/* === GIGS SECTION === */}
-        <motion.div
-          initial={{ opacity: 0, y: 25 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-white/80 backdrop-blur-2xl p-8 rounded-3xl shadow-lg border border-orange-100 hover:shadow-2xl transition-all duration-300"
-        >
-          <h2 className="text-2xl font-bold mb-6 text-gray-900 border-l-4 border-orange-500 pl-3">
-            Your Gigs
-          </h2>
+          <Panel delay={0.14}>
+            <SectionHeader title="Monthly earnings" />
+            <div className="overflow-x-auto">
+              <div className="min-w-[320px]">
+                <ReactECharts
+                  option={lineOption}
+                  style={{ height: "260px", width: "100%" }}
+                  onChartReady={(chart) => {
+                    window.addEventListener("resize", () => chart.resize());
+                  }}
+                />
+              </div>
+            </div>
+          </Panel>
+        </div>
+
+        {/* ── Donut ── */}
+        <Panel delay={0.16}>
+          <SectionHeader title="Revenue distribution" />
+          <div className="flex flex-col md:flex-row gap-6 items-center">
+            <div className="w-full md:w-2/5 overflow-x-auto">
+              <div className="min-w-[220px]">
+                <ReactECharts
+                  option={donutOption}
+                  style={{ height: "240px", width: "100%" }}
+                  onChartReady={(chart) => {
+                    window.addEventListener("resize", () => chart.resize());
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="w-full md:w-3/5 space-y-2.5">
+              {revenueData.map((gig, i) => {
+                const pct = totalRevenueAllGigs
+                  ? Math.round((gig.totalRevenue / totalRevenueAllGigs) * 100)
+                  : 0;
+                return (
+                  <div key={gig.title} className="flex items-center gap-3">
+                    <span
+                      className="shrink-0 w-2 h-2 rounded-full"
+                      style={{ background: palette[i % palette.length] }}
+                    />
+                    <span className="text-[12px] text-neutral-600 flex-1 truncate">
+                      {gig.title}
+                    </span>
+                    <span className="text-[12px] font-bold text-neutral-900 tabular-nums">
+                      {currencySymbol}
+                      {gig.totalRevenue.toLocaleString()}
+                    </span>
+                    <span className="text-[11px] text-neutral-400 tabular-nums w-8 text-right">
+                      {pct}%
+                    </span>
+                  </div>
+                );
+              })}
+              {revenueData.length === 0 && (
+                <p className="text-[12px] text-neutral-400">
+                  No revenue data yet.
+                </p>
+              )}
+            </div>
+          </div>
+        </Panel>
+
+        {/* ── Gigs ── */}
+        <Panel delay={0.18}>
+          <SectionHeader
+            title="Your gigs"
+            action={
+              <span className="text-[11px] font-semibold text-neutral-400">
+                {gigs.length} listing{gigs.length !== 1 ? "s" : ""}
+              </span>
+            }
+          />
 
           {gigs.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-              {gigs.map((gig) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {gigs.map((gig: any) => (
                 <motion.div
                   key={gig._id}
-                  whileHover={{ scale: 1.02 }}
-                  className="rounded-2xl shadow-sm p-5 bg-gradient-to-br from-white to-orange-50 hover:from-orange-100 hover:to-white border border-orange-100 transition-all duration-300"
+                  whileHover={{ y: -2 }}
+                  transition={{ duration: 0.15 }}
+                  className="group rounded-xl border border-neutral-200 overflow-hidden bg-white hover:border-[#f97316] hover:shadow-sm transition-all duration-200 cursor-pointer"
+                  onClick={() => router.push(`/gigdetails/${gig._id}`)}
                 >
-                  <div className="relative h-56 w-full mb-3">
+                  <div className="relative h-36 w-full bg-neutral-100">
                     <Image
                       src={gig.cover}
                       alt={gig.title}
                       fill
                       sizes="(max-width: 768px) 100vw, 33vw"
-                      className="object-cover rounded-xl shadow"
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                   </div>
-                  <h3 className="font-semibold text-lg text-gray-900">
-                    {gig.title}
-                  </h3>
-                  <p className="text-sm text-gray-600 break-words whitespace-pre-line truncate mt-1 line-clamp-2">
-                    {gig.desc}
-                  </p>
-                  <p className="text-md font-semibold mt-2 text-orange-600">
-                    {currencySymbol}{" "}
-                    {new Intl.NumberFormat().format(convertPrice(gig.price))}
-                  </p>
-                  <button
-                    onClick={() => router.push(`/gigdetails/${gig._id}`)}
-                    className="text-green-600 hover:text-green-700 mt-2 font-medium transition"
-                  >
-                    View Details →
-                  </button>
+                  <div className="p-3.5">
+                    <h3 className="font-bold text-neutral-900 text-[13px] leading-snug line-clamp-1">
+                      {gig.title}
+                    </h3>
+                    <p className="text-[11px] text-neutral-400 mt-1 line-clamp-2 leading-relaxed">
+                      {gig.desc}
+                    </p>
+                    <div className="flex items-center justify-between mt-3">
+                      <span className="text-[13px] font-black text-[#f97316]">
+                        {currencySymbol}
+                        {new Intl.NumberFormat().format(
+                          convertPrice(gig.price),
+                        )}
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-neutral-400 group-hover:text-[#f97316] transition-colors">
+                        View
+                        <ArrowTopRightOnSquareIcon className="w-3 h-3" />
+                      </span>
+                    </div>
+                  </div>
                 </motion.div>
               ))}
             </div>
           ) : (
-            <p>No gigs available yet.</p>
+            <div className="flex flex-col items-center justify-center py-12 text-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center">
+                <SparklesIcon className="w-5 h-5 text-[#f97316]" />
+              </div>
+              <p className="text-[13px] font-bold text-neutral-700">
+                No gigs yet
+              </p>
+              <p className="text-[11px] text-neutral-400">
+                Create your first gig to start earning.
+              </p>
+            </div>
           )}
-        </motion.div>
+        </Panel>
 
-        {/* === ORDERS SECTION === */}
-        <motion.div
-          initial={{ opacity: 0, y: 25 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white/80 backdrop-blur-2xl p-8 rounded-3xl shadow-lg border border-orange-100 hover:shadow-2xl transition-all duration-300"
-        >
-          <h2 className="text-2xl font-bold mb-6 text-gray-900 border-l-4 border-orange-500 pl-3">
-            Completed Orders
-          </h2>
+        {/* ── Orders ── */}
+        <Panel delay={0.2}>
+          <SectionHeader
+            title="Orders"
+            action={
+              <div className="flex gap-2">
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-green-50 text-green-700 px-2 py-1 rounded-lg">
+                  <CheckBadgeIcon className="w-3 h-3" />
+                  {completedOrders.length} done
+                </span>
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-orange-50 text-[#f97316] px-2 py-1 rounded-lg">
+                  <ClockIcon className="w-3 h-3" />
+                  {pendingOrders.length} pending
+                </span>
+              </div>
+            }
+          />
 
           {orders?.sellerOrders?.length > 0 ? (
-            <div className="space-y-4">
-              {orders.sellerOrders.map((order) => (
-                <div
-                  key={order._id}
-                  className="border-b border-gray-200 pb-3 hover:bg-orange-50/50 p-3 rounded-lg transition-all"
-                >
-                  <p>
-                    <strong>Order ID:</strong> {order._id}
-                  </p>
-                  <p>
-                    <strong>Total:</strong> {currencySymbol}
-                    {new Intl.NumberFormat().format(order.price)}{" "}
-                    {countryCurrency}
-                  </p>
-                  <p>
-                    <strong>Status:</strong>{" "}
-                    <span
-                      className={`font-semibold ${
-                        order.isCompleted ? "text-green-600" : "text-yellow-500"
-                      }`}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-neutral-100">
+                    <th className="text-left text-[10px] font-bold text-neutral-400 uppercase tracking-wider pb-3 pr-4">
+                      Order ID
+                    </th>
+                    <th className="text-left text-[10px] font-bold text-neutral-400 uppercase tracking-wider pb-3 pr-4">
+                      Amount
+                    </th>
+                    <th className="text-left text-[10px] font-bold text-neutral-400 uppercase tracking-wider pb-3">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-50">
+                  {orders.sellerOrders.map((order: any) => (
+                    <tr
+                      key={order._id}
+                      className="hover:bg-neutral-50 transition-colors"
                     >
-                      {order.isCompleted ? "Completed" : "Pending"}
-                    </span>
-                  </p>
-                </div>
-              ))}
+                      <td className="py-3 pr-4 font-mono text-[11px] text-neutral-400 truncate max-w-[140px]">
+                        {order._id}
+                      </td>
+                      <td className="py-3 pr-4 font-bold text-[13px] text-neutral-900 tabular-nums">
+                        {currencySymbol}
+                        {new Intl.NumberFormat().format(order.price)}
+                        <span className="ml-1 text-[11px] font-normal text-neutral-400">
+                          {countryCurrency}
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <span
+                          className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg ${
+                            order.isCompleted
+                              ? "bg-green-50 text-green-700"
+                              : "bg-orange-50 text-[#f97316]"
+                          }`}
+                        >
+                          {order.isCompleted ? (
+                            <CheckBadgeIcon className="w-3 h-3" />
+                          ) : (
+                            <ClockIcon className="w-3 h-3" />
+                          )}
+                          {order.isCompleted ? "Completed" : "Pending"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : (
-            <p>No completed orders yet.</p>
+            <div className="flex flex-col items-center justify-center py-12 text-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+                <ClockIcon className="w-5 h-5 text-neutral-400" />
+              </div>
+              <p className="text-[13px] font-bold text-neutral-700">
+                No orders yet
+              </p>
+              <p className="text-[11px] text-neutral-400">
+                Orders will appear here as they come in.
+              </p>
+            </div>
           )}
-        </motion.div>
+        </Panel>
       </div>
+
       <Footer />
-    </>
+    </div>
   );
 };
 

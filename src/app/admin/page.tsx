@@ -1,4 +1,3 @@
-// app/admin/dashboard/page.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -9,43 +8,22 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import {
+  HiOutlineCurrencyDollar,
+  HiOutlineShoppingCart,
+  HiOutlineCollection,
+  HiOutlineTrendingUp,
+} from "react-icons/hi";
+import { MdOutlineStorefront } from "react-icons/md";
 import { useExchangeRate } from "../hooks/useExchangeRate";
 import SellerNavbar from "../seller/components/navbar";
-import Footer from "../components/footer";
 
-// Dynamically import ECharts to prevent SSR issues
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
-// Types
-interface User {
-  _id: string;
-  username: string;
-  img?: string;
-}
-
-interface Gig {
-  _id: string;
-  title: string;
-  shortTitle: string;
-  desc: string;
-  cover: string;
-  userId: string;
-  price: number;
-}
-
-interface Order {
-  _id: string;
-  sellerName: string;
-  buyerName: string;
-  price: number;
-  status: string;
-}
-
-interface RevenueData {
-  sellerName: string;
-  totalSellerRevenueConverted: number;
-}
-
+interface User { _id: string; username: string; img?: string; }
+interface Gig { _id: string; title: string; shortTitle: string; desc: string; cover: string; userId: string; price: number; }
+interface Order { _id: string; sellerName: string; buyerName: string; price: number; status: string; }
+interface RevenueData { sellerName: string; totalSellerRevenueConverted: number; }
 interface AdminRevenueResponse {
   revenueData: RevenueData[];
   totalRevenueAllSellersConverted: number;
@@ -54,474 +32,443 @@ interface AdminRevenueResponse {
 
 const usersPerGroup = 10;
 
+const StatCard = ({
+  label, value, icon, index,
+}: {
+  label: string; value: string; icon: React.ReactNode; index: number;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 16 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.4, delay: index * 0.08 }}
+    className="group bg-white border border-[#f0f0f0] hover:border-orange-200 rounded-2xl p-6 transition-all duration-300 hover:-translate-y-0.5"
+  >
+    <div className="flex items-start justify-between mb-4">
+      <div className="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 text-[20px]">
+        {icon}
+      </div>
+      <div className="w-1.5 h-1.5 rounded-full bg-orange-500/30 group-hover:bg-orange-500 transition-colors" />
+    </div>
+    <p className="text-[10px] font-bold tracking-[0.16em] text-[#bbb] uppercase mb-1">{label}</p>
+    <p className="text-[24px] font-extrabold text-[#111]">{value}</p>
+  </motion.div>
+);
+
+const SectionHeader = ({ eyebrow, title }: { eyebrow: string; title: string }) => (
+  <div className="mb-6">
+    <div className="flex items-center gap-3 mb-1.5">
+      <div className="h-px w-5 bg-orange-500" />
+      <span className="text-[10px] font-bold tracking-[0.18em] text-orange-500 uppercase">{eyebrow}</span>
+    </div>
+    <h2 className="text-[18px] font-extrabold text-[#111]">{title}</h2>
+  </div>
+);
+
+const PaginationBar = ({
+  current, total, onPrev, onNext, onChange,
+}: {
+  current: number; total: number; onPrev: () => void; onNext: () => void; onChange: (n: number) => void;
+}) => (
+  <div className="flex items-center justify-between mt-6 pt-5 border-t border-[#f5f5f5]">
+    <button
+      onClick={onPrev}
+      disabled={current === 0}
+      className="flex items-center gap-1.5 text-[12px] font-semibold text-[#888] hover:text-orange-500 border border-[#ebebeb] hover:border-orange-200 px-4 py-2 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+    >
+      <FiChevronLeft /> Previous
+    </button>
+    <select
+      value={current}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className="text-[12px] font-semibold text-[#555] border border-[#ebebeb] rounded-xl px-3 py-2 outline-none focus:border-orange-300 transition"
+    >
+      {Array.from({ length: total }).map((_, i) => (
+        <option key={i} value={i}>Page {i + 1} of {total}</option>
+      ))}
+    </select>
+    <button
+      onClick={onNext}
+      disabled={current >= total - 1}
+      className="flex items-center gap-1.5 text-[12px] font-semibold text-[#888] hover:text-orange-500 border border-[#ebebeb] hover:border-orange-200 px-4 py-2 rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+    >
+      Next <FiChevronRight />
+    </button>
+  </div>
+);
+
 export default function AdminDashboard() {
   const router = useRouter();
   const currentUser =
     typeof window !== "undefined"
       ? JSON.parse(localStorage.getItem("currentUser") || "{}")
       : null;
-  const { currencySymbol, convertPrice } = useExchangeRate(
-    currentUser?.country
-  );
+  const { currencySymbol, convertPrice } = useExchangeRate(currentUser?.country);
 
-  const [currentGroup, setCurrentGroup] = useState(0);
+  const [revenueGroup, setRevenueGroup] = useState(0);
+  const [gigGroup, setGigGroup] = useState(0);
   const [userDetails, setUserDetails] = useState<Record<string, User>>({});
   const [sortedRevenueData, setSortedRevenueData] = useState<RevenueData[]>([]);
 
-  // Fetch admin revenue
   const { data: revenueData } = useQuery<AdminRevenueResponse>({
     queryKey: ["adminRevenue"],
-    queryFn: async () => {
-      const res = await newRequest.get("/orders/admin-revenue");
-      return res.data;
-    },
+    queryFn: () => newRequest.get("/orders/admin-revenue").then((r) => r.data),
   });
 
-  // Sort revenue by descending order
+  const { data: gigs = [] } = useQuery<Gig[]>({
+    queryKey: ["userGigs"],
+    queryFn: () => newRequest.get("/gigs").then((r) => r.data),
+  });
+
+  const { data: orders = [] } = useQuery<Order[]>({
+    queryKey: ["allCompletedOrders"],
+    queryFn: () => newRequest.get("/orders/all-completed").then((r) => r.data || []),
+  });
+
   useEffect(() => {
     if (revenueData?.revenueData) {
-      const sorted = [...revenueData.revenueData].sort(
-        (a, b) => b.totalSellerRevenueConverted - a.totalSellerRevenueConverted
+      setSortedRevenueData(
+        [...revenueData.revenueData].sort((a, b) => b.totalSellerRevenueConverted - a.totalSellerRevenueConverted)
       );
-      setSortedRevenueData(sorted);
     }
   }, [revenueData]);
 
-  // Fetch all gigs
-  const { data: gigs = [] } = useQuery<Gig[]>({
-    queryKey: ["userGigs"],
-    queryFn: async () => {
-      const res = await newRequest.get("/gigs");
-      return res.data;
-    },
-  });
-
-  // Fetch all completed orders
-  const { data: orders = [] } = useQuery<Order[]>({
-    queryKey: ["allCompletedOrders"],
-    queryFn: async () => {
-      const res = await newRequest.get("/orders/all-completed");
-      return res.data || [];
-    },
-  });
-
-  // Fetch user details for gigs
   useEffect(() => {
+    if (!gigs.length) return;
     const fetchUsers = async () => {
       const uniqueIds = [...new Set(gigs.map((g) => g.userId))];
-      const responses = await Promise.all(
-        uniqueIds.map((id) => newRequest.get(`/users/${id}`))
-      );
-      const usersMap: Record<string, User> = {};
-      responses.forEach((r) => (usersMap[r.data._id] = r.data));
-      setUserDetails(usersMap);
+      const responses = await Promise.all(uniqueIds.map((id) => newRequest.get(`/users/${id}`)));
+      const map: Record<string, User> = {};
+      responses.forEach((r) => (map[r.data._id] = r.data));
+      setUserDetails(map);
     };
-    if (gigs.length > 0) fetchUsers();
+    fetchUsers();
   }, [gigs]);
 
-  // Chart gradient colors
-  const gradientColor = {
-    type: "linear",
-    x: 0,
-    y: 0,
-    x2: 1,
-    y2: 0,
-    colorStops: [
-      { offset: 0, color: "#FFA500" }, // light orange
-      { offset: 1, color: "#FF4500" }, // deep orange
-    ],
+  // Chart config
+  const chartColors = {
+    gradient: { type: "linear", x: 0, y: 0, x2: 1, y2: 0, colorStops: [{ offset: 0, color: "#f97316" }, { offset: 1, color: "#ea580c" }] },
   };
 
-  // Paginated Bar Chart Option
-  const start = currentGroup * usersPerGroup;
-  const end = (currentGroup + 1) * usersPerGroup;
-  const groupedRevenue = sortedRevenueData.slice(start, end);
+  const revenueStart = revenueGroup * usersPerGroup;
+  const groupedRevenue = sortedRevenueData.slice(revenueStart, revenueStart + usersPerGroup);
+  const gigStart = gigGroup * usersPerGroup;
+  const groupedGigs = gigs.slice(gigStart, gigStart + usersPerGroup);
 
-  const paginatedBarOption = {
-    tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
+  const barOption = {
+    tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, backgroundColor: "#fff", borderColor: "#f0f0f0", textStyle: { color: "#111", fontSize: 12 } },
     xAxis: {
       type: "category",
       data: groupedRevenue.map((d) => d.sellerName),
-      axisLabel: { rotate: 45, fontSize: 14, color: "#FF7F50" },
-      axisTick: { alignWithLabel: true },
+      axisLabel: { rotate: 35, fontSize: 11, color: "#aaa" },
+      axisLine: { lineStyle: { color: "#f0f0f0" } },
+      axisTick: { show: false },
     },
     yAxis: {
       type: "value",
-      axisLabel: { fontSize: 14 },
-      splitLine: { lineStyle: { type: "dashed", color: "rgba(0,0,0,0.05)" } },
+      axisLabel: { fontSize: 11, color: "#aaa" },
+      splitLine: { lineStyle: { color: "#f7f7f7" } },
+      axisLine: { show: false },
     },
-    series: [
-      {
-        type: "bar",
-        data: groupedRevenue.map((d) => d.totalSellerRevenueConverted),
-        barWidth: "40%",
-        itemStyle: {
-          color: gradientColor,
-          borderRadius: [8, 8, 0, 0],
-          shadowBlur: 15,
-          shadowColor: "rgba(0,0,0,0.15)",
-        },
-        emphasis: {
-          itemStyle: { color: "#FF8C00" },
-        },
-        animationEasing: "elasticOut",
-        animationDelay(idx: number) {
-          return idx * 100;
-        },
-      },
-    ],
-    grid: { left: "5%", right: "5%", bottom: "20%", containLabel: true },
+    series: [{
+      type: "bar",
+      data: groupedRevenue.map((d) => d.totalSellerRevenueConverted),
+      barWidth: "45%",
+      itemStyle: { color: chartColors.gradient, borderRadius: [8, 8, 0, 0] },
+      emphasis: { itemStyle: { color: "#f97316" } },
+    }],
+    grid: { left: "3%", right: "3%", bottom: "18%", top: "5%", containLabel: true },
   };
 
-  // Donut chart
-  const pieChartOption = {
-    tooltip: { trigger: "item" },
-    series: [
-      {
-        name: "Revenue",
-        type: "pie",
-        radius: ["35%", "75%"], // slightly bigger donut
-        avoidLabelOverlap: false,
-        label: {
-          show: true,
-          position: "inside",
-          formatter: "{b}\n{d}%",
-          fontSize: 14,
-          color: "#fff",
-        },
-        labelLine: { show: false },
-        data: [
-          {
-            value: revenueData?.totalRevenueAllSellersConverted || 0,
-            name: "Total Revenue",
-            itemStyle: {
-              color: gradientColor,
-              shadowBlur: 15,
-              shadowColor: "rgba(0,0,0,0.2)",
-            },
-          },
-          {
-            value: (revenueData?.totalRevenueAllSellersConverted || 0) * 0.1,
-            name: "Company Income (10%)",
-            itemStyle: {
-              color: "#FFB347",
-              shadowBlur: 15,
-              shadowColor: "rgba(0,0,0,0.2)",
-            },
-          },
-        ],
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 25,
-            shadowOffsetX: 0,
-            shadowColor: "rgba(0,0,0,0.3)",
-          },
-        },
-        animationType: "scale",
-        animationEasing: "elasticOut",
-        animationDelay: 200,
-      },
-    ],
+  const donutOption = {
+    tooltip: { trigger: "item", backgroundColor: "#fff", borderColor: "#f0f0f0", textStyle: { color: "#111", fontSize: 12 } },
+    series: [{
+      type: "pie",
+      radius: ["45%", "72%"],
+      avoidLabelOverlap: false,
+      label: { show: true, position: "inside", formatter: "{b}\n{d}%", fontSize: 11, color: "#fff", fontWeight: "bold" },
+      labelLine: { show: false },
+      data: [
+        { value: revenueData?.totalRevenueAllSellersConverted || 0, name: "Seller Revenue", itemStyle: { color: "#f97316" } },
+        { value: (revenueData?.totalRevenueAllSellersConverted || 0) * 0.1, name: "RMGC (10%)", itemStyle: { color: "#fdba74" } },
+      ],
+      emphasis: { itemStyle: { shadowBlur: 20, shadowColor: "rgba(249,115,22,0.3)" } },
+    }],
   };
 
-  // Line Chart
-  const lineChartOption = {
-    tooltip: { trigger: "axis" },
+  const lineOption = {
+    tooltip: { trigger: "axis", backgroundColor: "#fff", borderColor: "#f0f0f0", textStyle: { color: "#111", fontSize: 12 } },
     xAxis: {
       type: "category",
       data: revenueData ? Object.keys(revenueData.monthlyEarnings) : [],
-      axisLabel: { fontSize: 14, color: "#FF7F50" },
+      axisLabel: { fontSize: 11, color: "#aaa" },
+      axisLine: { lineStyle: { color: "#f0f0f0" } },
+      axisTick: { show: false },
       boundaryGap: false,
     },
     yAxis: {
       type: "value",
-      axisLabel: { fontSize: 14 },
-      splitLine: { lineStyle: { type: "dashed", color: "rgba(0,0,0,0.05)" } },
+      axisLabel: { fontSize: 11, color: "#aaa" },
+      splitLine: { lineStyle: { color: "#f7f7f7" } },
+      axisLine: { show: false },
     },
-    series: [
-      {
-        data: revenueData ? Object.values(revenueData.monthlyEarnings) : [],
-        type: "line",
-        smooth: true,
-        symbol: "circle",
-        symbolSize: 8,
-        lineStyle: { color: gradientColor, width: 4 },
-        itemStyle: { color: "#FF8C00", borderColor: "#FFA500", borderWidth: 2 },
-        areaStyle: {
-          color: {
-            type: "linear",
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: "rgba(255,165,0,0.3)" },
-              { offset: 1, color: "rgba(255,165,0,0)" },
-            ],
-          },
-        },
-        animationEasing: "cubicOut",
+    series: [{
+      data: revenueData ? Object.values(revenueData.monthlyEarnings) : [],
+      type: "line",
+      smooth: true,
+      symbol: "circle",
+      symbolSize: 7,
+      lineStyle: { color: "#f97316", width: 3 },
+      itemStyle: { color: "#f97316", borderColor: "#fff", borderWidth: 2 },
+      areaStyle: {
+        color: { type: "linear", x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: "rgba(249,115,22,0.15)" }, { offset: 1, color: "rgba(249,115,22,0)" }] },
       },
-    ],
-    grid: { left: "5%", right: "5%", bottom: "10%", containLabel: true },
+    }],
+    grid: { left: "3%", right: "3%", bottom: "8%", top: "8%", containLabel: true },
   };
 
-  // Paginated gigs
-  const groupedGigs = gigs.slice(start, end);
+  const totalRevenue = revenueData?.totalRevenueAllSellersConverted || 0;
 
   return (
-    <>
-      <SellerNavbar />
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="p-6 space-y-6 bg-gradient-to-r from-orange-100 to-white min-h-screen"
-      >
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">
-          Admin Dashboard
-        </h1>
+    <div className="min-h-screen bg-[#fafafa]">
+      <div className="px-5 md:px-8 py-7 space-y-5 max-w-[1200px]">
 
-        {/* Revenue Per Seller */}
-        <motion.div className="bg-white p-6 rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300">
-          <h2 className="font-semibold text-lg mb-4 text-orange-700">
-            Total Revenue Per Service Provider
-          </h2>
-          <div className="w-full h-[400px] sm:h-[500px] md:h-[600px] lg:h-[700px] xl:h-[800px]">
-            <ReactECharts
-              option={paginatedBarOption}
-              style={{ height: "100%", width: "100%" }}
-            />
-          </div>
-
-          {/* Pagination Controls */}
-          <div className="flex flex-wrap items-center justify-between mt-6 gap-4">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              whileHover={{ scale: 1.05 }}
-              onClick={() => setCurrentGroup((prev) => Math.max(prev - 1, 0))}
-              disabled={currentGroup === 0}
-              className="flex items-center gap-1 px-4 py-2 bg-orange-100 text-orange-800 rounded-full shadow-sm transition hover:bg-orange-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <FiChevronLeft size={18} />
-              Previous
-            </motion.button>
-
-            <select
-              className="px-4 py-2 appearance-none bg-white border border-gray-300 rounded-full shadow-sm text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 transition"
-              value={currentGroup}
-              onChange={(e) => setCurrentGroup(Number(e.target.value))}
-            >
-              {Array.from({
-                length: Math.ceil(sortedRevenueData.length / usersPerGroup),
-              }).map((_, index) => (
-                <option key={index} value={index}>
-                  Page {index + 1}
-                </option>
-              ))}
-            </select>
-
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              whileHover={{ scale: 1.05 }}
-              onClick={() =>
-                setCurrentGroup((prev) =>
-                  (prev + 1) * usersPerGroup < sortedRevenueData.length
-                    ? prev + 1
-                    : prev
-                )
-              }
-              disabled={
-                (currentGroup + 1) * usersPerGroup >= sortedRevenueData.length
-              }
-              className="flex items-center gap-1 px-4 py-2 bg-orange-100 text-orange-800 rounded-full shadow-sm transition hover:bg-orange-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-              <FiChevronRight size={18} />
-            </motion.button>
-          </div>
-        </motion.div>
-
-        {/* Revenue Donut */}
-        <div className="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center hover:shadow-2xl transition-shadow duration-300">
-          <h2 className="text-xl font-semibold mb-4 text-orange-700">
-            Revenue Breakdown
-          </h2>
-          <div className="w-72 sm:w-96 md:w-[28rem] lg:w-[32rem] h-72 sm:h-96 md:h-[28rem] lg:h-[32rem]">
-            <ReactECharts
-              option={pieChartOption}
-              style={{ height: "100%", width: "100%" }}
-            />
-          </div>
-          <p className="mt-4 font-semibold text-orange-700">
-            Total Revenue: {currencySymbol}{" "}
-            {revenueData?.totalRevenueAllSellersConverted.toLocaleString()}
-          </p>
-          <p className="font-semibold text-orange-600">
-            Company Income (10%): {currencySymbol}{" "}
-            {(
-              (revenueData?.totalRevenueAllSellersConverted || 0) * 0.1
-            ).toLocaleString()}
-          </p>
-        </div>
-
-        {/* Monthly Sales Line Chart */}
-        <div className="bg-white p-6 rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300">
-          <h2 className="text-xl font-semibold mb-4 text-orange-700">
-            Monthly Company Income
-          </h2>
-          <div className="w-full h-[400px] sm:h-[500px] md:h-[600px] lg:h-[700px] xl:h-[800px]">
-            <ReactECharts
-              option={lineChartOption}
-              style={{ height: "100%", width: "100%" }}
-            />
-          </div>
-        </div>
-
-        {/* Completed Orders */}
-        <div className="bg-white p-6 rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300">
-          <h2 className="text-xl font-semibold mb-4 text-orange-700">
-            All Completed Orders
-          </h2>
-          {orders.length === 0 ? (
-            <p className="text-gray-500">No completed orders.</p>
-          ) : (
-            <div className="space-y-4">
-              {orders.map((order) => (
-                <div
-                  key={order._id}
-                  className="bg-orange-50 border rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 hover:shadow-lg transition-shadow duration-300"
-                >
-                  <p>
-                    <strong>Order ID:</strong> {order._id}
-                  </p>
-                  <p>
-                    <strong>Seller:</strong> {order.sellerName}
-                  </p>
-                  <p>
-                    <strong>Buyer:</strong> {order.buyerName}
-                  </p>
-                  <p className="font-semibold text-orange-700">
-                    <strong>Total:</strong> {currencySymbol}{" "}
-                    {order.price.toLocaleString()}
-                  </p>
-                  <span
-                    className={`px-2 py-1 rounded-full text-sm ${
-                      order.status === "Completed"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    {order.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Gigs Listing */}
-        <div className="bg-white p-6 rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300">
-          <h2 className="text-xl font-semibold mb-4 text-orange-700">
-            All Gigs
-          </h2>
-
-          {groupedGigs.length === 0 ? (
-            <p className="text-gray-500">No gigs available.</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {groupedGigs.map((gig) => {
-                const user = userDetails[gig.userId];
-
-                return (
-                  <div
-                    key={gig._id}
-                    className="bg-orange-50 hover:bg-orange-100 rounded-2xl p-4 shadow-md hover:shadow-lg transition-all duration-300 flex flex-col"
-                  >
-                    <h3 className="text-lg font-semibold mb-2 text-orange-800 truncate">
-                      {gig.title}
-                    </h3>
-
-                    {/* Cover Image with fallback */}
-                    <div className="relative w-full h-60 rounded-xl overflow-hidden">
-                      <Image
-                        src={gig.cover || "/default-cover.png"}
-                        alt={gig.shortTitle}
-                        fill
-                        className="object-cover w-full h-full"
-                        unoptimized
-                        onError={(e) =>
-                          ((e.target as HTMLImageElement).src =
-                            "/default-cover.png")
-                        }
-                      />
-                    </div>
-
-                    <p className="mt-2 text-gray-700 break-words whitespace-pre-line line-clamp-3">
-                      {gig.desc}
-                    </p>
-
-                    {/* User Info */}
-                    <div className="flex items-center gap-2 mt-2">
-                      <div className="relative w-8 h-8 rounded-full overflow-hidden">
-                        <Image
-                          src={user?.img || "/default-avatar.png"}
-                          alt={user?.username || "Unknown User"}
-                          fill
-                          className="object-cover"
-                          unoptimized
-                          onError={(e) =>
-                            ((e.target as HTMLImageElement).src =
-                              "/default-avatar.png")
-                          }
-                        />
-                      </div>
-                      <span className="text-gray-800 truncate">
-                        {user?.username || "Unknown User"}
-                      </span>
-                    </div>
-
-                    <p className="font-semibold mt-2 text-orange-700">
-                      Price: {currencySymbol}{" "}
-                      {convertPrice(gig.price).toLocaleString()}
-                    </p>
-                    <button
-                    onClick={() => router.push(`/gigdetails/${gig._id}`)}
-                    className="text-green-600 hover:text-green-700 mt-2 font-medium transition"
-                  >
-                    View Details →
-                  </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Pagination Controls */}
-          {gigs.length > usersPerGroup && (
-            <div className="flex justify-between items-center mt-6">
-              <button
-                disabled={currentGroup === 0}
-                onClick={() => setCurrentGroup((prev) => Math.max(prev - 1, 0))}
-                className="px-4 py-2 bg-orange-100 text-orange-800 rounded-full disabled:opacity-50 transition hover:bg-orange-200 flex items-center gap-2"
-              >
-                <FiChevronLeft /> Previous
-              </button>
-              <span className="text-orange-700">
-                Page {currentGroup + 1} of{" "}
-                {Math.ceil(gigs.length / usersPerGroup)}
+          {/* ── Page header ── */}
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-px w-6 bg-orange-500" />
+              <span className="text-[11px] font-bold tracking-[0.18em] text-orange-500 uppercase">
+                Admin
               </span>
-              <button
-                disabled={(currentGroup + 1) * usersPerGroup >= gigs.length}
-                onClick={() => setCurrentGroup((prev) => prev + 1)}
-                className="px-4 py-2 bg-orange-100 text-orange-800 rounded-full disabled:opacity-50 transition hover:bg-orange-200 flex items-center gap-2"
-              >
-                Next <FiChevronRight />
-              </button>
             </div>
-          )}
+            <h1 className="text-[28px] md:text-[34px] font-extrabold text-[#111] leading-tight">
+              Dashboard
+            </h1>
+            <p className="text-[13px] text-[#aaa] mt-1.5">
+              Platform overview — revenue, orders, and gigs at a glance.
+            </p>
+          </div>
+
+          {/* ── Stat cards ── */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <StatCard index={0} label="Total revenue" icon={<HiOutlineCurrencyDollar />}
+              value={`${currencySymbol}${totalRevenue.toLocaleString()}`} />
+            <StatCard index={1} label="RMGC income (10%)" icon={<HiOutlineTrendingUp />}
+              value={`${currencySymbol}${(totalRevenue * 0.1).toLocaleString()}`} />
+            <StatCard index={2} label="Completed orders" icon={<HiOutlineShoppingCart />}
+              value={orders.length.toString()} />
+            <StatCard index={3} label="Total gigs" icon={<HiOutlineCollection />}
+              value={gigs.length.toString()} />
+          </div>
+
+          {/* ── Charts row ── */}
+          <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6 mb-6">
+
+            {/* Bar chart */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+              className="bg-white border border-[#f0f0f0] rounded-2xl p-6"
+            >
+              <SectionHeader eyebrow="Revenue" title="Per service provider" />
+              <div className="h-[340px]">
+                <ReactECharts option={barOption} style={{ height: "100%", width: "100%" }} />
+              </div>
+              <PaginationBar
+                current={revenueGroup}
+                total={Math.ceil(sortedRevenueData.length / usersPerGroup)}
+                onPrev={() => setRevenueGroup((p) => Math.max(p - 1, 0))}
+                onNext={() => setRevenueGroup((p) => (p + 1) * usersPerGroup < sortedRevenueData.length ? p + 1 : p)}
+                onChange={setRevenueGroup}
+              />
+            </motion.div>
+
+            {/* Donut chart */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              className="bg-white border border-[#f0f0f0] rounded-2xl p-6 flex flex-col"
+            >
+              <SectionHeader eyebrow="Breakdown" title="Revenue split" />
+              <div className="flex-1 flex items-center justify-center">
+                <div className="w-full h-[260px]">
+                  <ReactECharts option={donutOption} style={{ height: "100%", width: "100%" }} />
+                </div>
+              </div>
+              <div className="space-y-3 mt-4">
+                {[
+                  { label: "Seller revenue", value: `${currencySymbol}${totalRevenue.toLocaleString()}`, color: "bg-orange-500" },
+                  { label: "RMGC income (10%)", value: `${currencySymbol}${(totalRevenue * 0.1).toLocaleString()}`, color: "bg-orange-300" },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center justify-between py-2.5 border-b border-[#f7f7f7] last:border-0">
+                    <div className="flex items-center gap-2.5">
+                      <span className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
+                      <span className="text-[12.5px] text-[#555]">{item.label}</span>
+                    </div>
+                    <span className="text-[13px] font-bold text-[#111]">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+
+          {/* ── Line chart ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.35 }}
+            className="bg-white border border-[#f0f0f0] rounded-2xl p-6 mb-6"
+          >
+            <SectionHeader eyebrow="Trends" title="Monthly company income" />
+            <div className="h-[280px]">
+              <ReactECharts option={lineOption} style={{ height: "100%", width: "100%" }} />
+            </div>
+          </motion.div>
+
+          {/* ── Completed orders ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.4 }}
+            className="bg-white border border-[#f0f0f0] rounded-2xl p-6 mb-6"
+          >
+            <SectionHeader eyebrow="Transactions" title="Completed orders" />
+
+            {orders.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-14 border border-dashed border-[#ebebeb] rounded-2xl">
+                <HiOutlineShoppingCart className="text-[32px] text-[#e5e5e5] mb-3" />
+                <p className="text-[13px] text-[#ccc]">No completed orders yet.</p>
+              </div>
+            ) : (
+              <>
+                {/* Table header */}
+                <div className="hidden md:grid grid-cols-[1fr_1fr_1fr_120px_100px] gap-4 px-4 py-2.5 border-b border-[#f5f5f5] bg-[#fafafa] rounded-xl mb-2">
+                  {["Order ID", "Seller", "Buyer", "Total", "Status"].map((h) => (
+                    <span key={h} className="text-[10px] font-bold tracking-[0.14em] text-[#bbb] uppercase">{h}</span>
+                  ))}
+                </div>
+                <div className="space-y-1">
+                  {orders.map((order, i) => (
+                    <motion.div
+                      key={order._id}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, delay: i * 0.03 }}
+                      className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_120px_100px] gap-4 items-center px-4 py-3.5 rounded-xl border border-transparent hover:border-[#f0f0f0] hover:bg-[#fafafa] transition-all"
+                    >
+                      <span className="text-[11.5px] font-mono text-[#aaa]">
+                        #{order._id.slice(-8).toUpperCase()}
+                      </span>
+                      <span className="text-[13px] font-semibold text-[#333] truncate">{order.sellerName}</span>
+                      <span className="text-[13px] text-[#555] truncate">{order.buyerName}</span>
+                      <span className="text-[13px] font-bold text-[#111]">
+                        {currencySymbol}{order.price.toLocaleString()}
+                      </span>
+                      <span className="flex items-center gap-1.5 text-[11px] font-bold text-green-600 bg-green-50 border border-green-100 px-2.5 py-1 rounded-lg w-fit">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                        {order.status}
+                      </span>
+                    </motion.div>
+                  ))}
+                </div>
+              </>
+            )}
+          </motion.div>
+
+          {/* ── All gigs ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.45 }}
+            className="bg-white border border-[#f0f0f0] rounded-2xl p-6"
+          >
+            <SectionHeader eyebrow="Marketplace" title="All gigs" />
+
+            {groupedGigs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-14 border border-dashed border-[#ebebeb] rounded-2xl">
+                <MdOutlineStorefront className="text-[32px] text-[#e5e5e5] mb-3" />
+                <p className="text-[13px] text-[#ccc]">No gigs available.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                {groupedGigs.map((gig, i) => {
+                  const user = userDetails[gig.userId];
+                  return (
+                    <motion.div
+                      key={gig._id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: i * 0.05 }}
+                      className="group border border-[#f0f0f0] hover:border-orange-200 rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-0.5"
+                    >
+                      {/* Cover */}
+                      <div className="relative w-full h-44 overflow-hidden bg-[#f7f7f7]">
+                        <Image
+                          src={gig.cover || "/default-cover.png"}
+                          alt={gig.shortTitle}
+                          fill
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          unoptimized
+                          onError={(e) => ((e.target as HTMLImageElement).src = "/default-cover.png")}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+
+                        {/* Price badge */}
+                        <div className="absolute bottom-3 left-3">
+                          <span className="text-[11px] font-bold text-white bg-orange-500 px-2.5 py-1 rounded-lg">
+                            {currencySymbol}{convertPrice(gig.price).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Body */}
+                      <div className="p-4">
+                        <p className="text-[13.5px] font-semibold text-[#111] truncate mb-1">{gig.title}</p>
+                        <p className="text-[12px] text-[#aaa] line-clamp-2 leading-relaxed mb-3">{gig.desc}</p>
+
+                        {/* Seller row */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="relative w-6 h-6 rounded-full overflow-hidden border border-[#f0f0f0]">
+                              <Image
+                                src={user?.img || "/default-avatar.png"}
+                                alt={user?.username || "User"}
+                                fill
+                                className="object-cover"
+                                unoptimized
+                                onError={(e) => ((e.target as HTMLImageElement).src = "/default-avatar.png")}
+                              />
+                            </div>
+                            <span className="text-[12px] text-[#555] truncate max-w-[100px]">
+                              {user?.username || "Unknown"}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => router.push(`/gigdetails/${gig._id}`)}
+                            className="text-[11.5px] font-bold text-orange-500 hover:text-orange-600 transition-colors"
+                          >
+                            View →
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+
+            {gigs.length > usersPerGroup && (
+              <PaginationBar
+                current={gigGroup}
+                total={Math.ceil(gigs.length / usersPerGroup)}
+                onPrev={() => setGigGroup((p) => Math.max(p - 1, 0))}
+                onNext={() => setGigGroup((p) => p + 1)}
+                onChange={setGigGroup}
+              />
+            )}
+          </motion.div>
         </div>
-      </motion.div>
-      <Footer />
-    </>
+    </div>
   );
 }

@@ -5,237 +5,243 @@ import { useQuery } from "@tanstack/react-query";
 import newRequest from "../../utils/newRequest";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  FaChevronRight,
-  FaMicrophone,
-  FaFileAlt,
-  FaCamera,
-  FaVideo,
-  FaPaperclip,
+  FaMicrophone, FaFileAlt, FaCamera, FaVideo, FaPaperclip,
 } from "react-icons/fa";
-import SellerNavbar from "@/app/seller/components/navbar";
-import Footer from "@/app/components/footer";
+import {
+  HiOutlineSearch, HiOutlineChatAlt2,
+} from "react-icons/hi";
+import { IoChevronForward } from "react-icons/io5";
+import { TbMessages } from "react-icons/tb";
 
-interface User {
-  _id: string;
-  username: string;
-  img?: string;
-}
+const FALLBACK =
+  "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg";
 
-interface Message {
-  text?: string;
-  mediaType?: "audio" | "document" | "image" | "video" | "file";
-}
+interface User { _id: string; username: string; img?: string; }
+interface Message { text?: string; mediaType?: "audio" | "document" | "image" | "video" | "file"; }
+interface Conversation { _id: string; participants: [User, User]; lastMessage?: Message; }
 
-interface Conversation {
-  _id: string;
-  participants: [User, User];
-  lastMessage?: Message;
-}
+const mediaMap: Record<string, JSX.Element> = {
+  audio:    <><FaMicrophone className="inline text-blue-400 mr-1 text-[11px]" />Voice message</>,
+  document: <><FaFileAlt className="inline text-green-400 mr-1 text-[11px]" />Document</>,
+  image:    <><FaCamera className="inline text-purple-400 mr-1 text-[11px]" />Photo</>,
+  video:    <><FaVideo className="inline text-red-400 mr-1 text-[11px]" />Video</>,
+  file:     <><FaPaperclip className="inline text-[#aaa] mr-1 text-[11px]" />File</>,
+};
+
+const getLastMessage = (msg?: Message | null): JSX.Element | string => {
+  if (!msg) return "No messages yet";
+  if (msg.mediaType) return mediaMap[msg.mediaType] || msg.text || "No messages yet";
+  return msg.text || "No messages yet";
+};
+
+const AvatarPair = ({ client, provider }: { client: User; provider: User }) => (
+  <div className="flex items-center">
+    <div className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-white shadow-sm flex-shrink-0 z-10">
+      <Image src={client.img?.trim() || FALLBACK} alt={client.username} fill className="object-cover" />
+    </div>
+    <div className="relative w-10 h-10 rounded-xl overflow-hidden border-2 border-white shadow-sm flex-shrink-0 -ml-3">
+      <Image src={provider.img?.trim() || FALLBACK} alt={provider.username} fill className="object-cover" />
+    </div>
+  </div>
+);
+
+const SkeletonCard = () => (
+  <div className="animate-pulse flex items-center gap-4 p-4 border border-[#f0f0f0] rounded-2xl">
+    <div className="flex -space-x-3">
+      <div className="w-10 h-10 rounded-xl bg-[#f5f5f5] border-2 border-white z-10" />
+      <div className="w-10 h-10 rounded-xl bg-[#f0f0f0] border-2 border-white" />
+    </div>
+    <div className="flex-1 space-y-2 min-w-0">
+      <div className="h-3 bg-[#f5f5f5] rounded-full w-2/3" />
+      <div className="h-2.5 bg-[#fafafa] rounded-full w-1/2" />
+      <div className="h-2.5 bg-[#fafafa] rounded-full w-3/4" />
+    </div>
+    <div className="w-4 h-4 bg-[#f5f5f5] rounded-full flex-shrink-0" />
+  </div>
+);
 
 const AdminMessages: React.FC = () => {
-  const [selectedConversation, setSelectedConversation] = useState<
-    string | null
-  >(null);
   const router = useRouter();
+  const [search, setSearch] = useState("");
 
-  const {
-    data: conversations = [],
-    isLoading,
-    error,
-  } = useQuery<Conversation[]>({
+  const { data: conversations = [], isLoading, error } = useQuery<Conversation[]>({
     queryKey: ["conversations"],
-    queryFn: async () => {
-      const res = await newRequest.get("/conversations");
-      return res.data;
-    },
+    queryFn: () => newRequest.get("/conversations").then((r) => r.data),
   });
 
-  const getLastMessageDisplay = (message?: Message | null) => {
-    if (!message) return "No messages yet";
-
-    const { mediaType, text } = message;
-
-    const mediaIcons: Record<string, JSX.Element> = {
-      audio: (
-        <>
-          <FaMicrophone className="inline text-blue-500 mr-1" />
-          Voice
-        </>
-      ),
-      document: (
-        <>
-          <FaFileAlt className="inline text-green-500 mr-1" />
-          Document
-        </>
-      ),
-      image: (
-        <>
-          <FaCamera className="inline text-purple-500 mr-1" />
-          Photo
-        </>
-      ),
-      video: (
-        <>
-          <FaVideo className="inline text-red-500 mr-1" />
-          Video
-        </>
-      ),
-      file: (
-        <>
-          <FaPaperclip className="inline text-gray-500 mr-1" />
-          File
-        </>
-      ),
-    };
-
-    return mediaType
-      ? mediaIcons[mediaType] || text || "No messages yet"
-      : text || "No messages yet";
-  };
-
-  if (isLoading) {
+  const filtered = conversations.filter((conv) => {
+    const [c, p] = conv.participants;
+    const q = search.toLowerCase();
     return (
-      <div className="p-6 bg-gray-50 min-h-screen flex flex-col items-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-          Client & Service Provider Conversations
-        </h1>
-        <div className="w-full max-w-6xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="animate-pulse flex flex-col justify-between bg-gray-100 p-4 rounded-2xl shadow-sm"
-            >
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gray-300" />
-                  <div className="space-y-1 flex-1">
-                    <div className="h-4 bg-gray-300 rounded w-24"></div>
-                    <div className="h-3 bg-gray-200 rounded w-16"></div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gray-300" />
-                  <div className="space-y-1 flex-1">
-                    <div className="h-4 bg-gray-300 rounded w-24"></div>
-                    <div className="h-3 bg-gray-200 rounded w-16"></div>
-                  </div>
-                </div>
-              </div>
-              <div className="h-3 bg-gray-200 rounded w-full" />
-            </div>
-          ))}
-        </div>
-      </div>
+      c.username.toLowerCase().includes(q) ||
+      p.username.toLowerCase().includes(q)
     );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6 bg-gray-50 min-h-screen flex flex-col items-center justify-center">
-        <div className="bg-red-100 text-red-700 px-6 py-4 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-2">
-            Failed to load conversations
-          </h2>
-          <p className="text-sm">
-            Please try refreshing the page or check your connection.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  });
 
   return (
-    <>
-      <SellerNavbar />
-      <div className="p-6 bg-gray-50 min-h-screen flex flex-col items-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-          Client & Service Provider Conversations
-        </h1>
+    <div className="min-h-screen bg-white">
+      <div className="max-w-[1400px] mx-auto px-6 md:px-10 py-10">
 
-        <div className="w-full max-w-6xl bg-white shadow-lg rounded-2xl overflow-hidden p-4 md:p-6">
-          {conversations.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {conversations.map((conv) => {
-                const [client, provider] = conv.participants;
-                const lastMessage = getLastMessageDisplay(conv.lastMessage);
-
-                return (
-                  <div
-                    key={conv._id}
-                    onClick={() => {
-                      setSelectedConversation(conv._id);
-                      router.push(`/admin/messages/${conv._id}`);
-                    }}
-                    className="flex flex-col justify-between bg-gray-50 p-4 rounded-2xl cursor-pointer hover:bg-orange-50 hover:shadow-lg transition duration-300 shadow-sm"
-                  >
-                    <div className="flex justify-between items-center mb-4">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-300 shadow-sm">
-                          <Image
-                            src={
-                              client.img && client.img.trim() !== ""
-                                ? client.img
-                                : "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
-                            }
-                            alt={client.username || "User avatar"}
-                            width={48}
-                            height={48}
-                            className="object-cover w-full h-full"
-                          />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-gray-800 truncate">
-                            {client.username}
-                          </p>
-                          <p className="text-sm text-gray-500">Client</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-12 h-12 rounded-full overflow-hidden border border-gray-300 shadow-sm">
-                          <Image
-                            src={
-                              provider?.img && provider.img.trim() !== ""
-                                ? provider.img
-                                : "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
-                            }
-                            alt={provider?.username || "User avatar"}
-                            width={48}
-                            height={48}
-                            className="object-cover w-full h-full"
-                          />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-semibold text-gray-800 truncate">
-                            {provider.username}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            Service Provider
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <p className="text-gray-600 text-sm truncate max-w-[70%]">
-                        {lastMessage}
-                      </p>
-                      <FaChevronRight className="text-gray-400" />
-                    </div>
-                  </div>
-                );
-              })}
+        {/* ── Page header ── */}
+        <div className="mb-10">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-px w-6 bg-orange-500" />
+            <span className="text-[11px] font-bold tracking-[0.18em] text-orange-500 uppercase">
+              Admin
+            </span>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div>
+              <h1 className="text-[28px] md:text-[34px] font-extrabold text-[#111] leading-tight">
+                Conversations
+              </h1>
+              <p className="text-[13px] text-[#aaa] mt-1.5">
+                Monitor all client ↔ freelancer message threads
+              </p>
             </div>
-          ) : (
-            <p className="text-center text-gray-500 p-10">
-              No conversations yet.
-            </p>
+            {/* Count badge */}
+            {!isLoading && (
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-white border border-[#f0f0f0] rounded-2xl self-start sm:self-auto">
+                <HiOutlineChatAlt2 className="text-orange-500 text-[18px]" />
+                <span className="text-[13px] font-extrabold text-[#111]">
+                  {conversations.length}
+                </span>
+                <span className="text-[12px] text-[#aaa]">
+                  thread{conversations.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Search ── */}
+        <div className="flex items-center gap-3 border-2 border-[#f0f0f0] focus-within:border-orange-300 focus-within:shadow-[0_0_0_4px_rgba(249,115,22,0.06)] rounded-xl px-4 py-3 mb-8 transition-all bg-white">
+          <HiOutlineSearch className="text-[#ccc] text-[17px] flex-shrink-0" />
+          <input
+            type="text"
+            placeholder="Search by client or freelancer name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="bg-transparent outline-none w-full text-[13.5px] text-[#111] placeholder:text-[#ccc]"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="text-[#ccc] hover:text-orange-500 text-[12px] transition-colors flex-shrink-0">
+              Clear
+            </button>
           )}
         </div>
+
+        {/* ── States ── */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-24 border border-red-100 bg-red-50/50 rounded-2xl">
+            <p className="text-[14px] font-semibold text-red-400">Failed to load conversations</p>
+            <p className="text-[12px] text-red-300 mt-1">Please refresh or check your connection.</p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 border border-dashed border-[#ebebeb] rounded-2xl">
+            <div className="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-4">
+              <TbMessages className="text-orange-500 text-[26px]" />
+            </div>
+            <p className="text-[14px] font-bold text-[#333]">
+              {search ? `No results for "${search}"` : "No conversations yet"}
+            </p>
+            <p className="text-[12.5px] text-[#bbb] mt-1">
+              {search ? "Try a different name." : "Conversations will appear here once users start messaging."}
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* ── Column header ── */}
+            <div className="hidden sm:grid grid-cols-[1fr_1fr_1fr_40px] gap-4 px-4 py-2.5 mb-2 border-b border-[#f5f5f5]">
+              {["Participants", "Client", "Freelancer", ""].map((h, i) => (
+                <span key={i} className="text-[10px] font-bold tracking-[0.14em] text-[#bbb] uppercase">{h}</span>
+              ))}
+            </div>
+
+            {/* ── List ── */}
+            <div className="space-y-2">
+              <AnimatePresence>
+                {filtered.map((conv, index) => {
+                  const [client, provider] = conv.participants;
+                  return (
+                    <motion.div
+                      key={conv._id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
+                      transition={{ duration: 0.25, delay: index * 0.03 }}
+                      onClick={() => router.push(`/admin/messages/${conv._id}`)}
+                      className="group grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_40px] items-center gap-4 p-4 bg-white border border-[#f0f0f0] hover:border-orange-200 hover:bg-[#fffaf7] rounded-2xl cursor-pointer transition-all duration-200 hover:-translate-y-[1px]"
+                    >
+                      {/* Participants — avatar pair + last message */}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <AvatarPair client={client} provider={provider} />
+                        <div className="min-w-0">
+                          <p className="text-[12px] font-semibold text-[#333] truncate">
+                            {client.username} & {provider.username}
+                          </p>
+                          <p className="text-[11.5px] text-[#aaa] truncate mt-0.5">
+                            {getLastMessage(conv.lastMessage)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Client */}
+                      <div className="hidden sm:flex items-center gap-2.5 min-w-0">
+                        <div className="relative w-7 h-7 rounded-lg overflow-hidden border border-[#f0f0f0] flex-shrink-0">
+                          <Image src={client.img?.trim() || FALLBACK} alt={client.username} fill className="object-cover" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[12.5px] font-semibold text-[#333] truncate">{client.username}</p>
+                          <span className="text-[10px] font-bold text-[#aaa] bg-[#f5f5f5] px-1.5 py-0.5 rounded-md">Client</span>
+                        </div>
+                      </div>
+
+                      {/* Freelancer */}
+                      <div className="hidden sm:flex items-center gap-2.5 min-w-0">
+                        <div className="relative w-7 h-7 rounded-lg overflow-hidden border border-[#f0f0f0] flex-shrink-0">
+                          <Image src={provider.img?.trim() || FALLBACK} alt={provider.username} fill className="object-cover" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[12.5px] font-semibold text-[#333] truncate">{provider.username}</p>
+                          <span className="text-[10px] font-bold text-orange-500 bg-orange-500/10 px-1.5 py-0.5 rounded-md">Freelancer</span>
+                        </div>
+                      </div>
+
+                      {/* Arrow */}
+                      <div className="hidden sm:flex justify-end">
+                        <div className="w-7 h-7 rounded-lg border border-[#f0f0f0] group-hover:border-orange-200 group-hover:bg-orange-500 flex items-center justify-center transition-all duration-200">
+                          <IoChevronForward className="text-[#ccc] group-hover:text-white text-[13px] transition-colors" />
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+
+            {/* ── Footer count ── */}
+            <div className="mt-6 flex items-center justify-between px-4 py-3 bg-[#fafafa] border border-[#f0f0f0] rounded-xl">
+              <span className="text-[11.5px] text-[#aaa]">
+                {filtered.length} conversation{filtered.length !== 1 ? "s" : ""}
+                {search && ` matching "${search}"`}
+              </span>
+              {search && (
+                <button onClick={() => setSearch("")} className="text-[11.5px] font-semibold text-orange-500 hover:underline">
+                  Clear search
+                </button>
+              )}
+            </div>
+          </>
+        )}
       </div>
-      <Footer />
-    </>
+    </div>
   );
 };
 

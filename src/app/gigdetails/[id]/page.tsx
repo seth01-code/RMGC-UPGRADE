@@ -1,27 +1,53 @@
 "use client";
 
-import React, { useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import React, { useRef, useState } from "react";
+import { useParams } from "next/navigation";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation } from "swiper/modules";
+import { Navigation, Pagination as SwiperPagination } from "swiper/modules";
+// @ts-ignore
 import "swiper/css";
+// @ts-ignore
 import "swiper/css/navigation";
+// @ts-ignore
+import "swiper/css/pagination";
 import { useQuery } from "@tanstack/react-query";
 import newRequest from "../../utils/newRequest";
 import Reviews from "../../seller/components/SellerReviews";
 import { IoMdStar } from "react-icons/io";
-import { MdMessage } from "react-icons/md";
-import { FaCheckDouble } from "react-icons/fa6";
+import { MdVerified } from "react-icons/md";
+import { FaCheckDouble, FaGlobe, FaRegCalendarAlt } from "react-icons/fa";
+import { HiArrowLeft } from "react-icons/hi";
+import { TbRefresh } from "react-icons/tb";
+import { LuClock4, LuBriefcase, LuLayers, LuAward, LuCircleCheck, LuFolderOpen } from "react-icons/lu";
 import Link from "next/link";
 import moment from "moment";
-import Recycle from "../../../assets/images/recycle.png";
-import Clock from "../../../assets/images/clock.png";
 import { useExchangeRate } from "../../hooks/useExchangeRate";
 import Image from "next/image";
-import SellerNavbar from "@/app/seller/components/navbar";
 import Footer from "@/app/components/footer";
-import Skeleton from "react-loading-skeleton";
-// import Navbar from "@/app/components/navbar";
+
+// ─────────────────────────────────────────────
+// TYPES
+// ─────────────────────────────────────────────
+
+interface PortfolioProject {
+  name: string;
+  description: string;
+  technologies: string[];
+  outcomes: string;
+}
+
+interface Portfolio {
+  status: "pending" | "processing" | "completed" | "failed";
+  headline?: string;
+  experience?: number;
+  skills?: string[];
+  services?: string[];
+  industries?: string[];
+  certifications?: string[];
+  projects?: PortfolioProject[];
+  confidence_score?: number;
+  analyzedAt?: string;
+}
 
 interface GigData {
   _id: string;
@@ -51,342 +77,534 @@ interface UserData {
   languages?: string[];
   yearsOfExperience?: number;
   createdAt: string;
+  portfolio?: Portfolio;
 }
+
+const FALLBACK_AVATAR =
+  "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg";
+
+// ─────────────────────────────────────────────
+// SKELETON
+// ─────────────────────────────────────────────
+
+const GigSkeleton = () => (
+  <div className="animate-pulse flex flex-col gap-0">
+    <div className="w-full h-[420px] md:h-[500px] bg-neutral-100" />
+    <div className="max-w-6xl mx-auto px-4 md:px-8 py-10 grid grid-cols-1 lg:grid-cols-3 gap-10 w-full">
+      <div className="lg:col-span-2 flex flex-col gap-5">
+        <div className="h-3 w-24 bg-neutral-100 rounded-full" />
+        <div className="h-8 w-3/4 bg-neutral-200 rounded-xl" />
+        <div className="flex gap-3 items-center">
+          <div className="w-10 h-10 rounded-full bg-neutral-100" />
+          <div className="h-3 w-28 bg-neutral-100 rounded-full" />
+        </div>
+        <div className="space-y-2 mt-4">
+          {[90, 82, 74, 60].map((w) => (
+            <div key={w} className="h-3 bg-neutral-100 rounded-full" style={{ width: `${w}%` }} />
+          ))}
+        </div>
+      </div>
+      <div className="h-72 bg-neutral-100 rounded-2xl" />
+    </div>
+  </div>
+);
+
+// ─────────────────────────────────────────────
+// STAR RATING
+// ─────────────────────────────────────────────
+
+const StarRating = ({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" }) => {
+  const filled = Math.round(rating);
+  const sz = size === "md" ? "text-[18px]" : "text-[14px]";
+  return (
+    <div className="flex items-center gap-0.5">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <IoMdStar key={i} className={`${sz} ${i < filled ? "text-amber-400" : "text-neutral-200"}`} />
+      ))}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+// PORTFOLIO SECTION (shown inside About Me tab)
+// ─────────────────────────────────────────────
+
+const PortfolioSection = ({ portfolio }: { portfolio: Portfolio }) => {
+  if (portfolio.status !== "completed") return null;
+
+  return (
+    <div className="flex flex-col gap-5 mt-6 pt-6 border-t border-neutral-100">
+
+      {/* Skills */}
+      {portfolio.skills && portfolio.skills.length > 0 && (
+        <div>
+          <p className="text-[10px] font-bold tracking-[0.15em] text-[#f97316] uppercase mb-3 flex items-center gap-1.5">
+            <LuLayers className="text-[12px]" /> Skills
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {portfolio.skills.map((skill, i) => (
+              <span
+                key={i}
+                className="text-[11px] font-semibold bg-neutral-50 border border-neutral-200 text-neutral-700 px-2.5 py-1 rounded-lg"
+              >
+                {skill}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Industries */}
+      {portfolio.industries && portfolio.industries.length > 0 && (
+        <div>
+          <p className="text-[10px] font-bold tracking-[0.15em] text-[#f97316] uppercase mb-3 flex items-center gap-1.5">
+            <LuBriefcase className="text-[12px]" /> Industries
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {portfolio.industries.map((ind, i) => (
+              <span
+                key={i}
+                className="text-[11px] font-semibold bg-blue-50 border border-blue-100 text-blue-700 px-2.5 py-1 rounded-lg"
+              >
+                {ind}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Certifications */}
+      {portfolio.certifications && portfolio.certifications.length > 0 && (
+        <div>
+          <p className="text-[10px] font-bold tracking-[0.15em] text-[#f97316] uppercase mb-3 flex items-center gap-1.5">
+            <LuAward className="text-[12px]" /> Certifications
+          </p>
+          <div className="flex flex-col gap-2">
+            {portfolio.certifications.map((cert, i) => (
+              <div key={i} className="flex items-center gap-2 text-[12px] text-neutral-700">
+                <LuCircleCheck className="text-green-500 text-[13px] shrink-0" />
+                {cert}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Projects */}
+      {portfolio.projects && portfolio.projects.length > 0 && (
+        <div>
+          <p className="text-[10px] font-bold tracking-[0.15em] text-[#f97316] uppercase mb-3 flex items-center gap-1.5">
+            <LuFolderOpen className="text-[12px]" /> Selected Projects
+          </p>
+          <div className="flex flex-col gap-3">
+            {portfolio.projects.map((proj, i) => (
+              <div
+                key={i}
+                className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 flex flex-col gap-2"
+              >
+                <p className="text-[13px] font-bold text-neutral-900">{proj.name}</p>
+
+                {proj.description && (
+                  <p className="text-[12px] text-neutral-500 leading-relaxed">{proj.description}</p>
+                )}
+
+                {proj.technologies?.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {proj.technologies.map((tech, ti) => (
+                      <span
+                        key={ti}
+                        className="text-[10px] font-bold bg-white border border-neutral-200 text-neutral-500 px-1.5 py-0.5 rounded"
+                      >
+                        {tech}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {proj.outcomes && (
+                  <p className="text-[11px] font-semibold text-green-600">
+                    ↗ {proj.outcomes}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+// MAIN COMPONENT
+// ─────────────────────────────────────────────
 
 const GigDetails: React.FC = () => {
   const params = useParams();
-  const router = useRouter();
   const gigId = params.id as string;
-  const currentUser =
-    typeof window !== "undefined"
-      ? JSON.parse(localStorage.getItem("currentUser") || "null")
-      : null;
-
+  const [activeTab, setActiveTab] = useState<"about" | "seller">("about");
   const prevRef = useRef<HTMLDivElement>(null);
   const nextRef = useRef<HTMLDivElement>(null);
 
   const { data, isLoading, error } = useQuery<GigData>({
     queryKey: ["gig", gigId],
-    queryFn: () =>
-      newRequest.get(`/gigs/single/${gigId}`).then((res) => res.data),
+    queryFn: () => newRequest.get(`/gigs/single/${gigId}`).then((r) => r.data),
     enabled: !!gigId,
   });
 
-  const {
-    data: dataUser,
-    isLoading: isLoadingUser,
-    error: errorUser,
-  } = useQuery<UserData>({
+  const { data: dataUser, isLoading: isLoadingUser } = useQuery<UserData>({
     queryKey: ["user", data?.userId],
     queryFn: () =>
       data?.userId
-        ? newRequest.get(`/users/${data.userId}`).then((res) => res.data)
+        ? newRequest.get(`/users/${data.userId}`).then((r) => r.data)
         : Promise.resolve(undefined),
     enabled: !!data?.userId,
   });
 
   const { data: userData } = useQuery({
     queryKey: ["authenticatedUser"],
-    queryFn: () => newRequest.get("/users/me").then((res) => res.data),
+    queryFn: () => newRequest.get("/users/me").then((r) => r.data),
   });
 
-  const { exchangeRate, currencySymbol } = useExchangeRate(
-    userData?.country || "United States"
-  );
+  const { exchangeRate, currencySymbol } = useExchangeRate(userData?.country || "United States");
 
-  const memberSince = dataUser
-    ? moment(dataUser.createdAt).format("DD MMMM, YYYY")
+  const memberSince = dataUser ? moment(dataUser.createdAt).format("MMM YYYY") : "";
+  const rating = data && data.starNumber > 0 ? data.totalStars / data.starNumber : null;
+  const allMedia = data
+    ? [...(data.images || []), ...(data.videos || []), ...(data.documents || [])]
+    : [];
+  const formattedPrice = data
+    ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(data.price * exchangeRate)
     : "";
 
-  if (isLoading) {
+  const hasPortfolio = dataUser?.portfolio?.status === "completed";
+
+  if (isLoading) return <GigSkeleton />;
+
+  if (error)
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-6 p-6">
-        {/* Blurred background version of dashboard */}
-        <div className="absolute inset-0 bg-gray-100 blur-lg opacity-30 z-0"></div>
-
-        {/* Foreground loading card */}
-        <div className="relative z-10 w-full max-w-6xl bg-white p-8 rounded-2xl shadow-xl">
-          <div className="flex flex-col gap-4">
-            <Skeleton height={40} width={220} />
-            <Skeleton height={24} count={2} />
+      <div className="flex justify-center items-center min-h-[60vh] px-4">
+        <div className="max-w-sm w-full text-center py-16">
+          <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">⚠</span>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-            <Skeleton height={140} className="rounded-xl animate-pulse-fast" />
-            <Skeleton height={140} className="rounded-xl animate-pulse-fast" />
-            <Skeleton height={140} className="rounded-xl animate-pulse-fast" />
-          </div>
-        </div>
-
-        <p className="text-gray-500 text-sm relative z-10">Loading ...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="max-w-md w-full p-8 bg-red-50 border border-red-200 rounded-xl shadow-lg text-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="mx-auto mb-4 h-12 w-12 text-red-500"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+          <h2 className="text-[17px] font-bold text-neutral-900 mb-1">Couldn&apos;t load this gig</h2>
+          <p className="text-[13px] text-neutral-400">Try refreshing the page or come back shortly.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-5 px-5 py-2.5 bg-[#f97316] text-white text-[13px] font-bold rounded-xl hover:bg-orange-600 transition"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 8v4m0 4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"
-            />
-          </svg>
-          <h2 className="text-xl font-semibold text-red-700 mb-2">
-            Failed to load gig
-          </h2>
-          <p className="text-red-500 text-sm">
-            Something went wrong while fetching this gig. Please try again
-            later.
-          </p>
+            Refresh
+          </button>
         </div>
       </div>
     );
-  }
 
   return (
-    <>
-      <SellerNavbar />
-      <div className="max-w-7xl mx-auto bg-gray-100 px-4 md:px-8 lg:px-12 py-8 grid grid-cols-1 lg:grid-cols-3 gap-10">
-        {/* LEFT SECTION */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          <div className="text-sm text-gray-500">
-            <Link href="/" className="text-orange-600 hover:underline">
-              RMGC
-            </Link>{" "}
-            &rarr; {data.cat} Category
-          </div>
+    <div className="min-h-screen bg-[#fafafa] flex flex-col">
 
-          <h1 className="text-3xl font-bold text-gray-900">{data.title}</h1>
+      {/* ── HERO MEDIA ── */}
+      <div className="relative w-full bg-neutral-950 select-none">
 
-          {isLoadingUser ? (
-            <p>Loading seller...</p>
-          ) : errorUser ? (
-            <p className="text-red-500">Error loading seller info</p>
-          ) : (
-            <div className="flex items-center gap-3">
-              <Image
-                src={
-                  dataUser?.img ||
-                  "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
+        <div className="absolute top-4 left-4 z-20">
+          <Link
+            href="/seller"
+            className="inline-flex items-center gap-2 bg-black/40 backdrop-blur-sm border border-white/15 text-white text-[11px] font-semibold px-3.5 py-2 rounded-full hover:bg-black/60 transition"
+          >
+            <HiArrowLeft className="text-[12px]" />
+            Back
+          </Link>
+        </div>
+
+        {allMedia.length > 0 ? (
+          <>
+            <div
+              ref={prevRef}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 flex items-center justify-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full cursor-pointer hover:bg-white/20 transition text-white text-lg"
+            >
+              ‹
+            </div>
+            <div
+              ref={nextRef}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 flex items-center justify-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-full cursor-pointer hover:bg-white/20 transition text-white text-lg"
+            >
+              ›
+            </div>
+
+            <div className="absolute bottom-4 right-4 z-20 bg-[#f97316] text-white px-4 py-2.5 rounded-2xl">
+              <p className="text-[10px] font-semibold tracking-widest uppercase opacity-75 mb-0.5">Listed at</p>
+              <p className="text-[20px] font-black leading-none tracking-tight">
+                {currencySymbol} {formattedPrice}
+              </p>
+            </div>
+
+            <Swiper
+              spaceBetween={0}
+              slidesPerView={1}
+              navigation={{ prevEl: prevRef.current, nextEl: nextRef.current }}
+              pagination={{
+                clickable: true,
+                bulletActiveClass: "!bg-orange-500 !opacity-100",
+                bulletClass: "swiper-pagination-bullet !bg-white !opacity-40",
+              }}
+              onBeforeInit={(swiper) => {
+                if (typeof swiper.params.navigation !== "boolean") {
+                  const nav = swiper.params.navigation as any;
+                  nav.prevEl = prevRef.current;
+                  nav.nextEl = nextRef.current;
                 }
-                alt="Seller"
-                className="rounded-full object-cover"
-                width={48} // 12 * 4px = 48px
-                height={48}
-              />
+              }}
+              modules={[Navigation, SwiperPagination]}
+              className="w-full h-[340px] md:h-[460px] [&_.swiper-wrapper]:h-full [&_.swiper-slide]:h-full"
+            >
+              {allMedia.map((fileUrl, i) => {
+                const isImage = /\.(jpeg|jpg|png|gif|webp)$/i.test(fileUrl);
+                const isVideo = /\.(mp4|webm|ogg)$/i.test(fileUrl);
+                const isPDF = /\.pdf$/i.test(fileUrl);
+                return (
+                  <SwiperSlide key={i} className="relative !h-full">
+                    {isImage ? (
+                      <Image src={fileUrl} alt={`Media ${i + 1}`} fill className="object-contain" sizes="100vw" unoptimized />
+                    ) : isVideo ? (
+                      <video src={fileUrl} controls className="w-full h-full object-contain" />
+                    ) : isPDF ? (
+                      <iframe src={fileUrl} className="w-full h-full" />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-white/40 text-sm">Unsupported format</div>
+                    )}
+                  </SwiperSlide>
+                );
+              })}
+            </Swiper>
+          </>
+        ) : (
+          <div className="w-full h-[240px] flex items-center justify-center text-white/30 text-sm">
+            No media uploaded yet
+          </div>
+        )}
+      </div>
 
-              <span className="font-medium">{dataUser?.username}</span>
-              {!isNaN(data.totalStars / data.starNumber) && (
-                <div className="flex items-center gap-1">
-                  {Array(Math.round(data.totalStars / data.starNumber))
-                    .fill(0)
-                    .map((_, i) => (
-                      <IoMdStar key={i} className="text-yellow-500" />
-                    ))}
-                  <span className="ml-1 text-sm">
-                    {Math.round(data.totalStars / data.starNumber)}
-                  </span>
+      {/* ── BODY ── */}
+      <div className="flex-1">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+          {/* ── LEFT ── */}
+          <div className="lg:col-span-2 flex flex-col gap-7">
+
+            {/* Title + author */}
+            <div className="flex flex-col gap-4">
+              {data.cat && (
+                <span className="inline-flex items-center text-[10px] font-bold uppercase tracking-[0.15em] text-[#f97316]">
+                  {data.cat}
+                </span>
+              )}
+              <h1 className="text-[24px] md:text-[30px] font-black text-neutral-900 leading-tight tracking-tight">
+                {data.title}
+              </h1>
+
+              {!isLoadingUser && dataUser && (
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="relative w-9 h-9 shrink-0">
+                    <Image
+                      src={dataUser.img || FALLBACK_AVATAR}
+                      alt={dataUser.username}
+                      fill
+                      className="rounded-full object-cover ring-2 ring-orange-200"
+                      sizes="36px"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1">
+                      <p className="text-[13px] font-bold text-neutral-900">{dataUser.username}</p>
+                      <MdVerified className="text-[#f97316] text-[12px]" />
+                    </div>
+                    {dataUser.country && (
+                      <p className="text-[11px] text-neutral-400 flex items-center gap-1">
+                        <FaGlobe className="text-[9px]" /> {dataUser.country}
+                      </p>
+                    )}
+                  </div>
+                  {rating !== null && (
+                    <div className="ml-auto flex items-center gap-1.5 bg-white border border-neutral-100 px-3 py-1.5 rounded-xl">
+                      <StarRating rating={rating} />
+                      <span className="text-[12px] font-bold text-neutral-900">{rating.toFixed(1)}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
 
-          {/* Gig Media */}
-          {data.images?.length ||
-          data.videos?.length ||
-          data.documents?.length ? (
-            <div className="relative">
-              <div
-                ref={prevRef}
-                className="absolute left-2 top-1/2 -translate-y-1/2 z-10 cursor-pointer p-2 bg-white rounded-full shadow-md hover:bg-gray-100"
-              >
-                ◀
-              </div>
-              <div
-                ref={nextRef}
-                className="absolute right-2 top-1/2 -translate-y-1/2 z-10 cursor-pointer p-2 bg-white rounded-full shadow-md hover:bg-gray-100"
-              >
-                ▶
-              </div>
-              <Swiper
-                spaceBetween={10}
-                slidesPerView={1}
-                navigation={{
-                  prevEl: prevRef.current,
-                  nextEl: nextRef.current,
-                }}
-                onBeforeInit={(swiper) => {
-                  swiper.params.navigation.prevEl = prevRef.current;
-                  swiper.params.navigation.nextEl = nextRef.current;
-                }}
-                modules={[Navigation]}
-                className="rounded-lg overflow-hidden bg-gray-50"
-              >
-                {[
-                  ...(data.images || []),
-                  ...(data.videos || []),
-                  ...(data.documents || []),
-                ].map((fileUrl, i) => {
-                  const isImage = /\.(jpeg|jpg|png|gif|webp)$/i.test(fileUrl);
-                  const isVideo = /\.(mp4|webm|ogg)$/i.test(fileUrl);
-                  const isPDF = /\.pdf$/i.test(fileUrl);
-
-                  return (
-                    <SwiperSlide
-                      key={i}
-                      className="flex justify-center items-center bg-gray-50"
-                    >
-                      {isImage ? (
-                        <div className="relative w-full h-[500px]">
-                          <Image
-                            src={fileUrl}
-                            alt={`media ${i}`}
-                            className="object-contain"
-                            fill
-                            sizes="(max-width: 768px) 100vw, 50vw"
-                            unoptimized // optional: use if your src is external and not in next.config.js
-                          />
-                        </div>
-                      ) : isVideo ? (
-                        <video
-                          src={fileUrl}
-                          controls
-                          className="max-h-[500px] w-full object-contain"
-                        />
-                      ) : isPDF ? (
-                        <iframe src={fileUrl} className="w-full h-[500px]" />
-                      ) : (
-                        <p className="text-gray-500">Unsupported format</p>
-                      )}
-                    </SwiperSlide>
-                  );
-                })}
-              </Swiper>
+            {/* Tabs */}
+            <div className="flex items-center gap-1 border-b border-neutral-200">
+              {(["about", "seller"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2.5 text-[12px] font-bold capitalize tracking-wide border-b-2 -mb-px transition-all ${
+                    activeTab === tab
+                      ? "border-[#f97316] text-[#f97316]"
+                      : "border-transparent text-neutral-400 hover:text-neutral-600"
+                  }`}
+                >
+                  {tab === "about" ? "Gig details" : "About Me"}
+                </button>
+              ))}
             </div>
-          ) : (
-            <p className="text-gray-500">No media available</p>
-          )}
 
-          <h2 className="text-xl font-semibold mt-6">About this Gig</h2>
-          <p className="text-gray-600 break-words whitespace-pre-line">
-            {data.desc}
-          </p>
-
-          {/* About Seller */}
-          {dataUser && (
-            <div className="mt-6 p-4 border rounded-lg shadow-sm flex flex-col gap-4">
-              <div className="flex items-center gap-4">
-                <Image
-                  src={dataUser?.img || ""}
-                  alt="Seller"
-                  className="rounded-full object-cover"
-                  width={64} // 16 * 4px = 64px
-                  height={64}
-                />
-                <div>
-                  <p className="font-medium">{dataUser.username}</p>
-                  <p className="text-sm text-gray-600">
-                    {dataUser.desc || "No bio provided"}
+            {/* ── Tab content ── */}
+            {activeTab === "about" ? (
+              <div className="flex flex-col gap-5">
+                <div className="bg-white rounded-2xl p-6 border border-neutral-100">
+                  <p className="text-[14px] text-neutral-500 leading-relaxed whitespace-pre-line break-words">
+                    {data.desc}
                   </p>
                 </div>
-              </div>
-              <div className="flex flex-col gap-2 text-sm text-gray-600">
-                <p>
-                  <strong>From:</strong> {dataUser.country || "Unknown"}
-                </p>
-                <p>
-                  <strong>Member Since:</strong> {memberSince}
-                </p>
-                <p>
-                  <strong>Languages:</strong>{" "}
-                  {dataUser.languages?.join(", ") || "Not provided"}
-                </p>
-                <p>
-                  <strong>Years Experience:</strong>{" "}
-                  {dataUser.yearsOfExperience || "Not provided"}
-                </p>
-              </div>
-            </div>
-          )}
 
-          <Reviews gigId={gigId} />
-        </div>
+                {data.features.length > 0 && (
+                  <div className="bg-white rounded-2xl p-6 border border-neutral-100">
+                    <p className="text-[11px] font-bold tracking-[0.15em] text-[#f97316] uppercase mb-4">
+                      What&apos;s included
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {data.features.map((f, i) => (
+                        <div key={i} className="flex items-start gap-2.5 text-[13px] text-neutral-600">
+                          <FaCheckDouble className="text-[#f97316] mt-0.5 shrink-0 text-[11px]" />
+                          <span>{f}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-        {/* RIGHT SECTION */}
-        <div
-          className="
-    w-full 
-    min-w-[280px]
-    bg-white 
-    p-6 
-    rounded-xl 
-    shadow-lg 
-    space-y-4 
-    lg:sticky 
-    lg:top-36 
-    transition-all 
-    duration-300 
-    hover:shadow-xl 
-    mt-6 
-    lg:mt-0 
-    h-auto 
-    self-start
-  "
-        >
-          {/* Title & Price */}
-          <div className="flex justify-between items-center">
-            <h3 className="font-semibold text-lg text-gray-900">
-              {data.shortTitle}
-            </h3>
-            <h3 className="font-bold text-lg text-gray-900">
-              {currencySymbol}{" "}
-              {new Intl.NumberFormat().format(data.price * exchangeRate)}
-            </h3>
+                <div className="bg-white rounded-2xl p-6 border border-neutral-100">
+                  <p className="text-[11px] font-bold tracking-[0.15em] text-[#f97316] uppercase mb-4">
+                    Buyer reviews
+                  </p>
+                  <Reviews gigId={gigId} />
+                </div>
+              </div>
+            ) : (
+              // ── ABOUT ME TAB ──
+              dataUser && (
+                <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
+                  {/* Cover + avatar */}
+                  <div className="relative h-24 bg-neutral-900">
+                    <div className="absolute inset-0 bg-[#f97316]/10" />
+                    <div className="absolute -bottom-9 left-6">
+                      <div className="relative w-[72px] h-[72px] rounded-2xl overflow-hidden ring-4 ring-white shadow-md">
+                        <Image
+                          src={dataUser.img || FALLBACK_AVATAR}
+                          alt={dataUser.username}
+                          fill
+                          className="object-cover"
+                          sizes="72px"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-14 px-6 pb-6">
+                    {/* Name + bio */}
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-[16px] font-black text-neutral-900">{dataUser.username}</p>
+                          <MdVerified className="text-[#f97316] text-[14px]" />
+                        </div>
+                        <p className="text-[13px] text-neutral-500 mt-1 max-w-md leading-relaxed">
+                          {dataUser.desc || "No bio added yet."}
+                        </p>
+                      </div>
+                      {rating !== null && (
+                        <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-100 px-3 py-2 rounded-xl shrink-0">
+                          <StarRating rating={rating} size="md" />
+                          <span className="text-[13px] font-bold text-neutral-900">{rating.toFixed(1)}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Stats row */}
+                    <div className="mt-6 pt-5 border-t border-neutral-100 grid grid-cols-2 sm:grid-cols-4 gap-5">
+                      {[
+                        { icon: <FaGlobe className="text-[11px]" />, label: "From", value: dataUser.country || "—" },
+                        { icon: <FaRegCalendarAlt className="text-[11px]" />, label: "Member since", value: memberSince || "—" },
+                        { icon: <FaGlobe className="text-[11px]" />, label: "Languages", value: dataUser.languages?.join(", ") || "—" },
+                        { icon: <LuBriefcase className="text-[11px]" />, label: "Experience", value: dataUser.yearsOfExperience ? `${dataUser.yearsOfExperience} yrs` : "—" },
+                      ].map((stat) => (
+                        <div key={stat.label} className="flex flex-col gap-1">
+                          <p className="text-[10px] font-bold tracking-wider text-neutral-300 uppercase flex items-center gap-1">
+                            {stat.icon} {stat.label}
+                          </p>
+                          <p className="text-[13px] font-semibold text-neutral-700 truncate">{stat.value}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Portfolio section — only renders if status is completed */}
+                    {hasPortfolio && (
+                      <PortfolioSection portfolio={dataUser.portfolio!} />
+                    )}
+                  </div>
+                </div>
+              )
+            )}
           </div>
 
-          {/* Short Description */}
-          <p className="text-gray-600 text-sm break-words whitespace-pre-line leading-relaxed">
-            {data.shortDesc}
-          </p>
-
-          {/* Delivery & Revisions */}
-          <div className="flex justify-between text-gray-700 text-sm mt-2">
-            <div className="flex items-center gap-1">
-              <Image src={Clock} alt="Delivery Time" width={20} height={20} />
-              <span>{data.deliveryTime} days</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Image src={Recycle} alt="Revisions" width={20} height={20} />
-              <span>{data.revisionNumber} revisions</span>
-            </div>
-          </div>
-
-          {/* Features */}
-          <div className="mt-3 flex flex-col gap-2">
-            {data.features.map((feature, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2 text-gray-700 text-sm hover:text-orange-600 transition"
-              >
-                <FaCheckDouble className="text-orange-500 flex-shrink-0" />
-                <span>{feature}</span>
+          {/* ── RIGHT — order card ── */}
+          <div className="lg:sticky lg:top-6 h-fit flex flex-col gap-4">
+            <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden">
+              <div className="bg-neutral-900 px-5 py-5">
+                <p className="text-[10px] font-bold tracking-[0.2em] text-[#f97316] uppercase mb-1">
+                  {data.shortTitle}
+                </p>
+                <div className="flex items-end justify-between gap-2">
+                  <p className="text-[28px] font-black text-white leading-none tracking-tight">
+                    {currencySymbol} {formattedPrice}
+                  </p>
+                  {rating !== null && (
+                    <div className="flex items-center gap-1 pb-0.5">
+                      <StarRating rating={rating} />
+                      <span className="text-[11px] text-white/60 font-semibold">{rating.toFixed(1)}</span>
+                    </div>
+                  )}
+                </div>
               </div>
-            ))}
+
+              <div className="px-5 py-5 flex flex-col gap-5">
+                <p className="text-[13px] text-neutral-500 leading-relaxed">{data.shortDesc}</p>
+
+                <div className="flex items-center justify-between text-[12px] font-semibold text-neutral-600">
+                  <div className="flex items-center gap-1.5">
+                    <LuClock4 className="text-[#f97316] text-[14px]" />
+                    <span>{data.deliveryTime}-day delivery</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <TbRefresh className="text-[#f97316] text-[14px]" />
+                    <span>{data.revisionNumber} revision{data.revisionNumber !== 1 ? "s" : ""}</span>
+                  </div>
+                </div>
+
+                <div className="h-px bg-neutral-100" />
+
+                {data.features.length > 0 && (
+                  <div className="flex flex-col gap-2.5">
+                    {data.features.map((f, i) => (
+                      <div key={i} className="flex items-start gap-2 text-[12px] text-neutral-500">
+                        <FaCheckDouble className="text-[#f97316] mt-0.5 shrink-0 text-[10px]" />
+                        <span>{f}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
+
         </div>
       </div>
+
       <Footer />
-    </>
+    </div>
   );
 };
 

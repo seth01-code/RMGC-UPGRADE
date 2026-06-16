@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,6 +8,11 @@ import newRequest from "../utils/newRequest";
 import { useExchangeRate } from "../hooks/useExchangeRate";
 import { useTranslation } from "react-i18next";
 import { toast } from "react-toastify";
+import { motion, AnimatePresence } from "framer-motion";
+import { MdOutlineAdd, MdOutlineStorefront } from "react-icons/md";
+import { HiOutlineTrash, HiOutlinePencil } from "react-icons/hi";
+import { IoSearchOutline } from "react-icons/io5";
+import ClipLoader from "react-spinners/ClipLoader";
 
 interface Gig {
   _id: string;
@@ -22,214 +27,310 @@ interface User {
   isSeller?: boolean;
 }
 
+const SkeletonRow = () => (
+  <div className="flex items-center gap-4 p-4 border-b border-[#f5f5f5] animate-pulse">
+    <div className="w-16 h-12 rounded-xl bg-[#f5f5f5] flex-shrink-0" />
+    <div className="flex-1 space-y-2">
+      <div className="h-3 bg-[#f5f5f5] rounded-full w-2/3" />
+      <div className="h-2.5 bg-[#fafafa] rounded-full w-1/3" />
+    </div>
+    <div className="h-3 bg-[#f5f5f5] rounded-full w-16 hidden sm:block" />
+    <div className="h-3 bg-[#f5f5f5] rounded-full w-10 hidden md:block" />
+    <div className="w-7 h-7 rounded-lg bg-[#f5f5f5]" />
+  </div>
+);
+
 const MyGigs: React.FC = () => {
   const { t } = useTranslation();
   const currentUser: User =
     typeof window !== "undefined"
       ? JSON.parse(localStorage.getItem("currentUser") || "{}")
       : ({} as User);
+
   const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
-  // Fetch user data
-  const {
-    data: userData,
-    isLoading: userLoading,
-    error: userError,
-  } = useQuery({
+  const { data: userData } = useQuery({
     queryKey: ["userData", currentUser?.id],
-    queryFn: async () => {
-      const res = await newRequest.get(`/users/me`);
-      return res.data;
-    },
+    queryFn: () => newRequest.get("/users/me").then((r) => r.data),
   });
 
-  // Fetch gigs
-  const {
-    data: gigs,
-    isLoading,
-    error,
-  } = useQuery<Gig[]>({
+  const { data: gigs, isLoading, error } = useQuery<Gig[]>({
     queryKey: ["myGigs", currentUser?.id],
-    queryFn: async () => {
-      const res = await newRequest.get(`/gigs?userId=${currentUser.id}`);
-      return res.data;
-    },
+    queryFn: () =>
+      newRequest.get(`/gigs?userId=${currentUser.id}`).then((r) => r.data),
   });
 
-  const country = userData?.country || "Nigeria";
-  const { exchangeRate, currencySymbol } = useExchangeRate(country);
+  const { exchangeRate, currencySymbol } = useExchangeRate(userData?.country || "Nigeria");
 
   const mutation = useMutation({
-    mutationFn: async (id: string) => {
-      await newRequest.delete(`/gigs/${id}`);
-    },
+    mutationFn: (id: string) => newRequest.delete(`/gigs/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myGigs", currentUser?.id] });
       toast.success("Gig deleted successfully!");
+      setDeletingId(null);
+      setConfirmId(null);
     },
     onError: (err: any) => {
       toast.error(`Error deleting gig: ${err.message}`);
+      setDeletingId(null);
     },
   });
 
   const handleDelete = (id: string) => {
+    setDeletingId(id);
     mutation.mutate(id);
   };
 
-  const formatPrice = (price: number) => {
-    return price.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  };
+  const formatPrice = (price: number) =>
+    price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  if (isLoading || userLoading)
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
-        <div className="relative w-full max-w-5xl p-8 rounded-3xl backdrop-blur-md bg-white/20 border border-white/30 shadow-2xl">
-          <div className="space-y-6">
-            {/* Simulate table header */}
-            <div className="grid grid-cols-5 gap-4 pb-2 border-b border-gray-200/30">
-              {["Image", "Title", "Price", "Sales", "Action"].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-4 bg-gray-300/40 rounded-md animate-pulse w-3/4 mx-auto"
-                ></div>
-              ))}
-            </div>
+  const filtered = gigs?.filter((g) =>
+    g.title.toLowerCase().includes(search.toLowerCase())
+  ) || [];
 
-            {/* Simulate 6 loading rows */}
-            {[...Array(6)].map((_, i) => (
-              <div
-                key={i}
-                className="grid grid-cols-5 items-center gap-4 py-4 border-b border-gray-200/20"
-              >
-                {/* Image Placeholder */}
-                <div className="w-16 h-12 bg-gray-300/40 rounded-md animate-pulse mx-auto" />
-
-                {/* Title */}
-                <div className="space-y-2">
-                  <div className="h-3.5 bg-gray-300/50 rounded-md w-3/4 animate-pulse"></div>
-                  <div className="h-3 bg-gray-300/30 rounded-md w-1/2 animate-pulse"></div>
-                </div>
-
-                {/* Price */}
-                <div className="h-4 bg-gray-300/40 rounded-md w-1/2 mx-auto animate-pulse"></div>
-
-                {/* Sales */}
-                <div className="h-4 bg-gray-300/40 rounded-md w-1/3 mx-auto animate-pulse"></div>
-
-                {/* Action (icon placeholder) */}
-                <div className="w-6 h-6 bg-gray-300/40 rounded-full mx-auto animate-pulse"></div>
-              </div>
-            ))}
-          </div>
-
-          {/* Floating shimmer light */}
-          <div className="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none">
-            <div className="animate-[shimmer_2.5s_infinite] absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/25 to-transparent" />
-          </div>
-        </div>
-
-        <style jsx>{`
-          @keyframes shimmer {
-            0% {
-              transform: translateX(-100%);
-            }
-            100% {
-              transform: translateX(100%);
-            }
-          }
-        `}</style>
-      </div>
-    );
-
-  if (error || userError)
-    return (
-      <div className="flex justify-center items-center min-h-[300px] text-red-500 text-lg font-medium">
-        {t("errorFetchingData")}: {String(error || userError)}
-      </div>
-    );
+  const totalRevenue = gigs?.reduce((s, g) => s + g.price * g.sales, 0) || 0;
+  const totalSales = gigs?.reduce((s, g) => s + g.sales, 0) || 0;
 
   return (
-    <div className="flex justify-center px-4 md:px-8 lg:px-16 py-10 bg-gradient-to-b from-gray-50 to-gray-100 min-h-screen">
-      <div className="w-full max-w-6xl bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 tracking-tight">
-            {t("gigsTitle") || "My Gigs"}
-          </h1>
+    <div className="min-h-screen bg-white">
+      <div className="max-w-screen-xl mx-auto px-6 md:px-12 py-12">
+
+        {/* ── Page header ── */}
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10">
+          <div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-px w-6 bg-orange-500" />
+              <span className="text-[11px] font-bold tracking-[0.18em] text-orange-500 uppercase">
+                Freelancer dashboard
+              </span>
+            </div>
+            <h1 className="text-[28px] md:text-[34px] font-extrabold text-[#111] leading-tight">
+              My gigs
+            </h1>
+            <p className="text-[13px] text-[#aaa] mt-1.5">
+              Manage and track all your active listings
+            </p>
+          </div>
+
           {currentUser?.isSeller && (
             <Link href="/add">
-              <button className="mt-4 md:mt-0 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-semibold py-2.5 px-6 rounded-md shadow hover:opacity-90 transition">
-                {t("addNewGig") || "Add New Gig"}
-              </button>
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="flex items-center gap-2 bg-[#111] hover:bg-orange-500 text-white text-[13px] font-bold px-5 py-3 rounded-xl transition-all"
+              >
+                <MdOutlineAdd className="text-[17px]" />
+                Add new gig
+              </motion.button>
             </Link>
           )}
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto rounded-lg border border-gray-100">
-          <table className="w-full text-sm md:text-base">
-            <thead className="bg-gray-100 text-gray-700 font-medium">
-              <tr>
-                <th className="text-left p-4">Image</th>
-                <th className="text-left p-4">Title</th>
-                <th className="text-left p-4">Price</th>
-                <th className="text-left p-4">Sales</th>
-                <th className="text-left p-4">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {gigs?.length ? (
-                gigs.map((gig) => (
-                  <tr
-                    key={gig._id}
-                    className="border-b hover:bg-gray-50 transition"
-                  >
-                    <td className="p-4">
-                      <div className="relative w-20 h-14 rounded-md overflow-hidden shadow-sm">
-                        <Image
-                          src={gig.cover || "/placeholder.jpg"}
-                          alt={gig.title}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    </td>
-                    <td className="p-4 font-medium text-gray-800">
+        {/* ── Stats strip ── */}
+        {!isLoading && gigs && gigs.length > 0 && (
+          <div className="grid grid-cols-3 gap-4 mb-8">
+            {[
+              { label: "Total gigs", value: gigs.length.toString() },
+              { label: "Total sales", value: totalSales.toLocaleString() },
+              {
+                label: "Est. revenue",
+                value: `${currencySymbol}${formatPrice(totalRevenue * exchangeRate)}`,
+              },
+            ].map((stat, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: i * 0.08 }}
+                className="bg-white border border-[#f0f0f0] rounded-2xl p-5 hover:border-orange-200 transition-colors"
+              >
+                <p className="text-[10px] font-bold tracking-[0.16em] text-orange-500 uppercase mb-2">
+                  {stat.label}
+                </p>
+                <p className="text-[22px] font-extrabold text-[#111]">
+                  {stat.value}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Search bar ── */}
+        {!isLoading && gigs && gigs.length > 0 && (
+          <div className="flex items-center gap-3 border-2 border-[#f0f0f0] focus-within:border-orange-300 focus-within:shadow-[0_0_0_4px_rgba(249,115,22,0.06)] rounded-xl px-4 py-3 mb-6 transition-all bg-white">
+            <IoSearchOutline className="text-[#ccc] text-[17px] flex-shrink-0" />
+            <input
+              type="text"
+              placeholder="Search your gigs..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="bg-transparent outline-none w-full text-[13.5px] text-[#111] placeholder:text-[#ccc]"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="text-[#ccc] hover:text-orange-500 text-[12px] transition-colors flex-shrink-0"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ── Content ── */}
+        {isLoading ? (
+          <div className="bg-white border border-[#f0f0f0] rounded-2xl overflow-hidden">
+            {Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center py-20 border border-[#f0f0f0] rounded-2xl">
+            <p className="text-[13px] text-red-400">Failed to load gigs.</p>
+          </div>
+        ) : gigs?.length === 0 ? (
+          /* Empty state */
+          <div className="flex flex-col items-center justify-center py-24 border border-dashed border-[#e5e5e5] rounded-2xl">
+            <div className="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-4">
+              <MdOutlineStorefront className="text-orange-500 text-[26px]" />
+            </div>
+            <p className="text-[14px] font-bold text-[#333] mb-1">No gigs yet</p>
+            <p className="text-[12.5px] text-[#bbb] mb-6 text-center max-w-[220px]">
+              Create your first gig and start getting clients.
+            </p>
+            <Link href="/add">
+              <button className="flex items-center gap-2 bg-[#111] hover:bg-orange-500 text-white text-[12.5px] font-bold px-5 py-2.5 rounded-xl transition-all">
+                <MdOutlineAdd className="text-[15px]" />
+                Create a gig
+              </button>
+            </Link>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 border border-[#f0f0f0] rounded-2xl">
+            <IoSearchOutline className="text-[32px] text-[#e5e5e5] mb-3" />
+            <p className="text-[13px] text-[#ccc]">No gigs match "{search}"</p>
+          </div>
+        ) : (
+          /* Gig list */
+          <div className="bg-white border border-[#f0f0f0] rounded-2xl overflow-hidden">
+
+            {/* Table header */}
+            <div className="hidden md:grid grid-cols-[auto_1fr_120px_80px_100px] items-center gap-4 px-5 py-3 border-b border-[#f5f5f5] bg-[#fafafa]">
+              {["Cover", "Title", "Price", "Sales", "Actions"].map((h) => (
+                <span key={h} className="text-[10px] font-bold tracking-[0.14em] text-[#bbb] uppercase">
+                  {h}
+                </span>
+              ))}
+            </div>
+
+            <AnimatePresence>
+              {filtered.map((gig, index) => (
+                <motion.div
+                  key={gig._id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.25, delay: index * 0.04 }}
+                  className="group flex flex-col md:grid md:grid-cols-[auto_1fr_120px_80px_100px] items-center gap-4 px-5 py-4 border-b border-[#f5f5f5] last:border-0 hover:bg-[#fafafa] transition-colors"
+                >
+                  {/* Cover */}
+                  <div className="relative w-16 h-12 rounded-xl overflow-hidden flex-shrink-0 border border-[#f0f0f0]">
+                    <Image
+                      src={gig.cover || "/placeholder.jpg"}
+                      alt={gig.title}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+
+                  {/* Title */}
+                  <div className="flex-1 min-w-0 w-full md:w-auto">
+                    <p className="text-[13.5px] font-semibold text-[#111] truncate">
                       {gig.title}
-                    </td>
-                    <td className="p-4 font-semibold text-green-600">
-                      {currencySymbol}{" "}
-                      {formatPrice((gig.price * exchangeRate) as any)}
-                    </td>
-                    <td className="p-4 font-medium text-gray-700">
-                      {formatPrice(gig.sales)}
-                    </td>
-                    <td className="p-4">
-                      <button
-                        onClick={() => handleDelete(gig._id)}
-                        className="text-red-500 hover:text-red-600 cursor-pointer transition transform hover:scale-110"
-                      >
-                        ✕
+                    </p>
+                    <p className="text-[11px] text-[#bbb] mt-0.5">
+                      ID: {gig._id.slice(-6).toUpperCase()}
+                    </p>
+                  </div>
+
+                  {/* Price */}
+                  <div className="w-full md:w-auto flex md:block items-center justify-between">
+                    <span className="text-[11px] text-[#bbb] md:hidden">Price</span>
+                    <p className="text-[13.5px] font-bold text-[#111]">
+                      {currencySymbol}{formatPrice(gig.price * exchangeRate)}
+                    </p>
+                  </div>
+
+                  {/* Sales */}
+                  <div className="w-full md:w-auto flex md:block items-center justify-between">
+                    <span className="text-[11px] text-[#bbb] md:hidden">Sales</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[13px] font-semibold text-[#111]">
+                        {gig.sales}
+                      </span>
+                      {gig.sales > 0 && (
+                        <span className="text-[9px] font-bold text-green-500 bg-green-50 border border-green-100 px-1.5 py-0.5 rounded-md">
+                          Active
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+                    <Link href={`/edit/${gig._id}`}>
+                      <button className="w-8 h-8 rounded-xl border border-[#f0f0f0] hover:border-orange-200 flex items-center justify-center text-[#ccc] hover:text-orange-500 transition-all">
+                        <HiOutlinePencil className="text-[13px]" />
                       </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="text-center py-8 text-gray-500 italic"
-                  >
-                    No gigs found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                    </Link>
+
+                    {confirmId === gig._id ? (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleDelete(gig._id)}
+                          disabled={deletingId === gig._id}
+                          className="flex items-center gap-1 text-[11px] font-bold text-white bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded-lg transition-all disabled:opacity-60"
+                        >
+                          {deletingId === gig._id ? (
+                            <ClipLoader size={9} color="#fff" />
+                          ) : "Confirm"}
+                        </button>
+                        <button
+                          onClick={() => setConfirmId(null)}
+                          className="text-[11px] font-semibold text-[#bbb] hover:text-[#555] px-2 py-1.5 rounded-lg transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmId(gig._id)}
+                        className="w-8 h-8 rounded-xl border border-[#f0f0f0] hover:border-red-200 flex items-center justify-center text-[#ccc] hover:text-red-400 transition-all"
+                      >
+                        <HiOutlineTrash className="text-[13px]" />
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {/* Footer count */}
+            <div className="px-5 py-3 border-t border-[#f5f5f5] bg-[#fafafa] flex items-center justify-between">
+              <span className="text-[11.5px] text-[#bbb]">
+                {filtered.length} gig{filtered.length !== 1 ? "s" : ""}
+                {search && ` matching "${search}"`}
+              </span>
+              <Link href="/add">
+                <button className="flex items-center gap-1.5 text-[11.5px] font-semibold text-[#aaa] hover:text-orange-500 transition-colors">
+                  <MdOutlineAdd className="text-[14px]" />
+                  Add another
+                </button>
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

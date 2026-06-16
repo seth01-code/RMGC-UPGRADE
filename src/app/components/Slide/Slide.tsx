@@ -4,11 +4,12 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
-import "swiper/css";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import newRequest from "../../utils/newRequest"; // Axios instance
+import newRequest from "../../utils/newRequest";
 import { motion } from "framer-motion";
+// @ts-ignore
+import "swiper/css";
 
 interface Gig {
   _id: string;
@@ -24,83 +25,6 @@ const Slide: React.FC = () => {
   const router = useRouter();
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const FloatingCircle = ({
-    size,
-    color,
-    duration,
-    delay,
-    top,
-    left,
-  }: {
-    size: number;
-    color: string;
-    duration: number;
-    delay: number;
-    top: string;
-    left: string;
-  }) => (
-    <motion.div
-      className="absolute rounded-full blur-[60px] opacity-70"
-      style={{
-        width: size,
-        height: size,
-        background: color,
-        top,
-        left,
-        boxShadow: `0 0 80px ${color}`,
-      }}
-      animate={{
-        x: [0, 100, -80, 120, -60, 0],
-        y: [0, -100, 60, -120, 80, 0],
-        rotate: [0, 45, 90, 135, 180, 225, 270, 360],
-        scale: [1, 1.1, 0.95, 1.05, 1],
-        opacity: [0.7, 1, 0.85, 1],
-      }}
-      transition={{
-        duration,
-        repeat: Infinity,
-        repeatType: "mirror",
-        delay,
-        ease: "easeInOut",
-      }}
-    />
-  );
-
-  const circles = [
-    {
-      size: 260,
-      color: "rgba(255,140,0,0.45)",
-      duration: 10,
-      delay: 0,
-      top: "10%",
-      left: "15%",
-    },
-    {
-      size: 200,
-      color: "rgba(0,200,255,0.35)",
-      duration: 11,
-      delay: 1,
-      top: "25%",
-      left: "70%",
-    },
-    {
-      size: 280,
-      color: "rgba(255,100,200,0.35)",
-      duration: 9,
-      delay: 1.5,
-      top: "55%",
-      left: "40%",
-    },
-    {
-      size: 220,
-      color: "rgba(255,255,255,0.25)",
-      duration: 12,
-      delay: 2,
-      top: "70%",
-      left: "10%",
-    },
-  ];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -120,7 +44,6 @@ const Slide: React.FC = () => {
           };
         });
 
-        // Filter duplicate categories
         const uniqueCategories = new Set();
         const filteredGigs = mergedData.filter((gig) => {
           if (uniqueCategories.has(gig.cat)) return false;
@@ -139,111 +62,192 @@ const Slide: React.FC = () => {
     fetchData();
   }, []);
 
-  // Glassy loading shimmer placeholders
-  const LoadingSkeleton = () => (
-    <div className="cursor-pointer rounded-2xl overflow-hidden shadow-md backdrop-blur-md bg-white/10 border border-white/20 animate-pulse">
-      <div className="w-full h-[200px] bg-gradient-to-r from-white/10 via-white/20 to-white/10 rounded-t-2xl animate-shimmer" />
-      <div className="flex items-center gap-3 p-4">
-        <div className="w-10 h-10 rounded-full bg-white/20 animate-pulse" />
-        <div className="flex flex-col flex-1 space-y-2">
-          <div className="w-3/4 h-3 bg-white/20 rounded-md" />
-          <div className="w-1/2 h-3 bg-white/10 rounded-md" />
+  const handleClick = (gig: Gig) => {
+    const currentUser = JSON.parse(localStorage.getItem("currentUser") || "{}");
+    if (currentUser?.isSeller || currentUser?.isAdmin) {
+      router.push(`/gigdetails/${gig._id}`);
+    } else {
+      router.push(`/gig/${gig._id}`);
+    }
+  };
+
+  // Skeleton — swap dark colors for light
+  const SkeletonCard = () => (
+    <div className="rounded-2xl overflow-hidden bg-white border border-[#f0f0f0] animate-pulse">
+      <div className="w-full h-[200px] bg-[#f7f7f7]" />
+      <div className="p-4 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-[#efefef] flex-shrink-0" />
+          <div className="flex-1 space-y-2">
+            <div className="h-2.5 bg-[#efefef] rounded-full w-3/4" />
+            <div className="h-2 bg-[#f5f5f5] rounded-full w-1/2" />
+          </div>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="relative bg-gradient-to-b from-white to-orange-50 py-14 px-4 sm:px-6 md:px-12 lg:px-20">
-      <div className="absolute inset-0 bottom-[-150px] overflow-visible z-[2] pointer-events-none">
-        {circles.map((circle, index) => (
-          <FloatingCircle key={index} {...circle} />
-        ))}
-      </div>
-      {loading ? (
-        // Loading shimmer layout
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <LoadingSkeleton key={i} />
-          ))}
-        </div>
-      ) : gigs.length > 0 ? (
-        <Swiper
-          spaceBetween={15}
-          slidesPerGroup={1}
-          modules={[Autoplay]}
-          autoplay={{ delay: 2500, disableOnInteraction: false }}
-          loop={false}
-          breakpoints={{
-            1400: { slidesPerView: 4, spaceBetween: 40 },
-            1200: { slidesPerView: 3, spaceBetween: 30 },
-            1024: { slidesPerView: 3, spaceBetween: 25 },
-            768: { slidesPerView: 2, spaceBetween: 20 },
-            576: { slidesPerView: 1.5, spaceBetween: 15 },
-            420: { slidesPerView: 1.2, spaceBetween: 10 },
-            320: { slidesPerView: 1, spaceBetween: 8 },
-          }}
-        >
-          {gigs.map((gig) => (
-            <SwiperSlide key={gig._id}>
-              <div
-                onClick={() => {
-                  const currentUser = JSON.parse(
-                    localStorage.getItem("currentUser") || "{}"
-                  );
-                  if (currentUser?.isSeller || currentUser?.isAdmin) {
-                    router.push(`/gigdetails/${gig._id}`);
-                  } else {
-                    router.push(`/gig/${gig._id}`);
-                  }
-                }}
-                className="cursor-pointer rounded-2xl overflow-hidden backdrop-blur-md bg-white/20 
-  border border-white/30 shadow-md hover:shadow-xl transform transition-all duration-300 
-  hover:scale-[1.03] hover:bg-white/30"
-              >
-                {/* Gig Image */}
-                <div className="relative w-full h-[220px]">
-                  <Image
-                    src={gig.cover}
-                    alt={t("slide.projectImageAlt")}
-                    fill
-                    className="object-cover rounded-t-2xl"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                </div>
+    <section className="relative bg-white py-16 px-4 sm:px-6 md:px-12 lg:px-20 overflow-hidden">
+      {/* Subtle glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full bg-orange-500/5 blur-[120px] pointer-events-none" />
 
-                {/* Gig Info */}
-                <div className="flex items-center gap-3 p-4">
-                  <div className="relative w-10 h-10 flex-shrink-0">
+      {/* Top border */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-500/30 to-transparent" />
+
+      <div className="relative z-10 max-w-[1400px] mx-auto">
+        {/* Section header */}
+        <div className="flex items-end justify-between mb-10">
+          <div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-px w-6 bg-orange-500" />
+              <span className="text-[11px] font-bold tracking-[0.18em] text-orange-500 uppercase">
+                Live on platform
+              </span>
+            </div>
+            <h2 className="text-[24px] md:text-[30px] font-extrabold text-[#111] leading-tight">
+              Featured gigs
+            </h2>
+            <p className="text-[13px] text-[#444] mt-1.5">
+              Handpicked services from verified Freelancers
+            </p>
+          </div>
+
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => router.push("/allgigs")}
+            className="hidden md:flex items-center gap-2 text-[12px] font-semibold text-[#aaa] hover:text-[#111] border border-[#ebebeb] hover:border-[#ccc] px-5 py-2.5 rounded-xl transition-all"
+          >
+            View all gigs
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path
+                d="M2 10L10 2M10 2H4M10 2V8"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </motion.button>
+        </div>
+
+        {/* Content */}
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        ) : gigs.length > 0 ? (
+          <Swiper
+            spaceBetween={14}
+            slidesPerGroup={1}
+            modules={[Autoplay]}
+            autoplay={{ delay: 2800, disableOnInteraction: false }}
+            loop={false}
+            breakpoints={{
+              1400: { slidesPerView: 4, spaceBetween: 16 },
+              1200: { slidesPerView: 3, spaceBetween: 14 },
+              1024: { slidesPerView: 3, spaceBetween: 14 },
+              768: { slidesPerView: 2, spaceBetween: 12 },
+              576: { slidesPerView: 1.5, spaceBetween: 12 },
+              420: { slidesPerView: 1.2, spaceBetween: 10 },
+              320: { slidesPerView: 1, spaceBetween: 8 },
+            }}
+          >
+            {gigs.map((gig, index) => (
+              <SwiperSlide key={gig._id}>
+                <motion.div
+                  onClick={() => handleClick(gig)}
+                  className="group relative cursor-pointer rounded-2xl overflow-hidden bg-white border border-[#f0f0f0] hover:border-orange-200 transition-all duration-300 hover:-translate-y-1"
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.06 }}
+                >
+                  {/* Image */}
+                  <div className="relative w-full h-[200px] overflow-hidden">
                     <Image
-                      src={
-                        gig.sellerImg ||
-                        "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
-                      }
-                      alt={t("slide.profileImageAlt")}
+                      src={gig.cover}
+                      alt={gig.cat}
                       fill
-                      className="rounded-full object-cover border border-white/40 shadow-sm"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
                     />
+                    {/* Gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+                    {/* Category pill */}
+                    <div className="absolute top-3 left-3">
+                      <span className="text-[10px] font-bold tracking-wider text-orange-400 bg-black/60 backdrop-blur-sm border border-orange-500/20 px-2.5 py-1 rounded-lg uppercase">
+                        {gig.cat}
+                      </span>
+                    </div>
+
+                    {/* Hover arrow */}
+                    <div className="absolute top-3 right-3 w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0 transition-all duration-300">
+                      <svg
+                        width="10"
+                        height="10"
+                        viewBox="0 0 12 12"
+                        fill="none"
+                      >
+                        <path
+                          d="M2 10L10 2M10 2H4M10 2V8"
+                          stroke="white"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
                   </div>
-                  <div className="flex flex-col overflow-hidden">
-                    <h2 className="text-sm text-gray-900 font-semibold truncate">
-                      {t("slide.category", { category: gig.cat })}
-                    </h2>
-                    <span className="text-xs text-gray-600 truncate">
-                      {gig.sellerUsername}
-                    </span>
+
+                  {/* Footer */}
+                  <div className="flex items-center gap-3 p-4 border-t border-[#f0f0f0]">
+                    <div className="relative w-8 h-8 flex-shrink-0">
+                      <Image
+                        src={
+                          gig.sellerImg ||
+                          "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
+                        }
+                        alt={gig.sellerUsername || "Seller"}
+                        fill
+                        className="rounded-full object-cover border border-[#2a2a2a]"
+                      />
+                    </div>
+                    <div className="flex flex-col overflow-hidden min-w-0">
+                      <span className="text-[12.5px] font-semibold text-[#333] truncate group-hover:text-[#111] transition-colors">
+                        {gig.sellerUsername}
+                      </span>
+                      <span className="text-[11px] text-[#bbb] truncate">
+                        Verified Freelancer
+                      </span>
+                    </div>
+
+                    {/* Right dot indicator */}
+                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-300 group-hover:bg-orange-500 transition-colors flex-shrink-0" />
                   </div>
-                </div>
-              </div>
-            </SwiperSlide>
-          ))}
-        </Swiper>
-      ) : (
-        <p className="text-center text-gray-600 font-medium text-lg py-10">
-          No gigs available yet.
-        </p>
-      )}
-    </div>
+                </motion.div>
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20 border border-[#f0f0f0] rounded-2xl">
+            <p className="text-[#bbb] text-[13px]">No gigs available yet.</p>
+          </div>
+        )}
+
+        {/* Mobile view-all */}
+        <div className="mt-8 flex md:hidden justify-center">
+          <button
+            onClick={() => router.push("/allgigs")}
+            className="text-[12px] font-semibold text-[#aaa] hover:text-[#111] border border-[#ebebeb] hover:border-[#ccc] px-6 py-2.5 rounded-xl transition-all"
+          >
+            View all gigs →
+          </button>
+        </div>
+      </div>
+    </section>
   );
 };
 

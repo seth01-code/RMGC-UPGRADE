@@ -4,10 +4,13 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { MdAlternateEmail } from "react-icons/md";
 import { FaFingerprint, FaRegEye, FaRegEyeSlash } from "react-icons/fa";
+import { HiArrowRight } from "react-icons/hi";
 import newRequest from "../utils/newRequest";
 import Cookies from "js-cookie";
 import Image from "next/image";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+import ClipLoader from "react-spinners/ClipLoader";
 
 import logo from "../../assets/logoo.webp";
 import backgroundImage from "../../assets/wallpaper.jpg";
@@ -18,6 +21,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState<"username" | "password" | null>(null);
 
   useEffect(() => {
     const userCookie = Cookies.get("currentUser");
@@ -27,138 +32,277 @@ export default function LoginPage() {
     }
   }, [router]);
 
-  const togglePasswordView = () => setShowPassword(!showPassword);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setLoading(true);
 
     try {
       const res = await newRequest.post("/auth/login", { username, password });
       const userData = res.data;
-
       localStorage.setItem("currentUser", JSON.stringify(userData));
 
-      // ✅ Conditional redirect
       if (userData.role === "organization") {
-        if (!userData.vipSubscription?.active) {
-          router.push("/organization/terms-privacy");
-        } else {
-          router.push("/organization/dashboard");
-        }
+        router.push(userData.vipSubscription?.active ? "/organization/dashboard" : "/organization/terms-privacy");
       } else if (userData.role === "remote_worker") {
-        if (!userData.vipSubscription?.active) {
-          router.push("/remote/dashboard");
-        } else {
-          router.push("/remote/dashboard");
-        }
+        router.push("/remote/dashboard");
       } else {
         router.push("/");
       }
     } catch (err: any) {
-      if (err.response) {
-        if (err.response.data.error === "Incorrect password") {
-          setError("Incorrect password. Please try again.");
-        } else {
-          setError(err.response.data.error || "Something went wrong.");
-        }
-      } else {
-        setError(err.message);
-      }
+      setError(
+        err.response?.data?.error === "Incorrect password"
+          ? "Incorrect password. Please try again."
+          : err.response?.data?.error || "Something went wrong."
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div
-      className="w-full h-screen flex items-center justify-center bg-no-repeat bg-cover bg-center relative"
-      style={{ backgroundImage: `url(${backgroundImage.src})` }}
-    >
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+    <div className="relative w-full min-h-screen flex overflow-hidden">
 
-      {/* Login Card */}
-      <div className="relative w-[90%] max-w-md p-8 rounded-2xl bg-white/10 backdrop-blur-xl shadow-xl border border-white/20 flex flex-col items-center gap-6">
+      {/* ── Left panel — background image (desktop only) ── */}
+      <div className="hidden lg:block relative w-[55%] flex-shrink-0">
         <Image
-          src={logo}
-          alt="logo"
-          width={64}
-          height={64}
-          className="w-14 h-14 rounded-full object-cover border-2 border-orange-500 shadow-md"
+          src={backgroundImage}
+          alt="Background"
+          fill
+          className="object-cover"
+          priority
+        />
+        {/* Dark overlay */}
+        <div className="absolute inset-0 bg-black/50" />
+
+        {/* Grid texture */}
+        <div
+          className="absolute inset-0 opacity-[0.04] pointer-events-none"
+          style={{
+            backgroundImage: `linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)`,
+            backgroundSize: "48px 48px",
+          }}
         />
 
-        <h1 className="text-2xl font-bold text-white">Welcome Back</h1>
-        <p className="text-sm text-gray-300">
-          No account?{" "}
-          <Link href="/register" className="text-orange-400 hover:underline">
-            Sign Up
-          </Link>
-        </p>
+        {/* Corner glow */}
+        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full bg-orange-500/20 blur-[120px] pointer-events-none" />
 
-        <form
-          onSubmit={handleSubmit}
-          className="w-full flex flex-col gap-5 text-sm"
-        >
-          {/* Username */}
-          <div className="flex items-center gap-3 bg-white/10 border border-white/20 rounded-xl p-3 focus-within:ring-2 focus-within:ring-orange-400">
-            <MdAlternateEmail className="text-orange-400 text-lg" />
-            <input
-              type="text"
-              placeholder="Username"
-              className="bg-transparent outline-none w-full text-white placeholder-gray-400"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
+        {/* Content overlay */}
+        <div className="absolute inset-0 flex flex-col justify-between p-12 z-10">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <Image src={logo} alt="RMGC" width={36} height={36} className="rounded-xl object-cover" />
+            <div>
+              <p className="text-white font-extrabold text-[15px] leading-none tracking-wide">
+                <span className="text-orange-500">RM</span>GC
+              </p>
+              <p className="text-[10px] text-white/40 tracking-widest uppercase mt-0.5">Platform</p>
+            </div>
           </div>
 
-          {/* Password */}
-          <div className="flex items-center gap-3 bg-white/10 border border-white/20 rounded-xl p-3 relative focus-within:ring-2 focus-within:ring-orange-400">
-            <FaFingerprint className="text-orange-400 text-lg" />
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              className="bg-transparent outline-none w-full text-white placeholder-gray-400"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            {showPassword ? (
-              <FaRegEyeSlash
-                className="absolute right-4 cursor-pointer text-gray-300 hover:text-orange-400"
-                onClick={togglePasswordView}
-              />
-            ) : (
-              <FaRegEye
-                className="absolute right-4 cursor-pointer text-gray-300 hover:text-orange-400"
-                onClick={togglePasswordView}
-              />
-            )}
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <p className="text-red-400 text-xs text-center font-medium">
-              {error}
+          {/* Quote */}
+          <div className="space-y-4">
+            <div className="h-px w-10 bg-orange-500" />
+            <h2 className="text-[32px] font-extrabold text-white leading-tight max-w-[340px]">
+              Connecting talent,{" "}
+              <span className="text-orange-500">globally.</span>
+            </h2>
+            <p className="text-[13px] text-white/50 max-w-[300px] leading-relaxed">
+              Freelancers, organizations, and remote talent — all on one trusted platform.
             </p>
-          )}
 
-          {/* Forgot Password */}
-          <div className="flex justify-between items-center text-xs text-gray-300">
-            <span>Forgot your password?</span>
-            <Link
-              href="/forgot-password"
-              className="text-orange-400 hover:underline"
-            >
-              Reset Here
-            </Link>
+            {/* Stats strip */}
+            <div className="flex items-center gap-6 pt-4">
+              {[
+                { value: "350+", label: "Freelancers" },
+                { value: "480+", label: "Projects" },
+                { value: "6", label: "Countries" },
+              ].map((s, i) => (
+                <div key={i} className={`${i > 0 ? "pl-6 border-l border-white/10" : ""}`}>
+                  <p className="text-[16px] font-extrabold text-white">{s.value}</p>
+                  <p className="text-[10px] text-white/40 uppercase tracking-wider">{s.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Login Button */}
-          <button
-            type="submit"
-            className="w-full py-3 bg-orange-500 hover:bg-orange-600 transition rounded-xl text-white font-semibold shadow-md"
-          >
-            Login
-          </button>
-        </form>
+          {/* Bottom note */}
+          <p className="text-[11px] text-white/25">
+            © {new Date().getFullYear()} Renewed Minds Global Consult
+          </p>
+        </div>
+      </div>
+
+      {/* ── Right panel — form ── */}
+      <div className="flex-1 bg-white flex items-center justify-center px-6 py-12 relative">
+
+        {/* Subtle top orange line */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-orange-500 lg:hidden" />
+
+        {/* Background glow */}
+        <div className="absolute top-0 right-0 w-[300px] h-[300px] rounded-full bg-orange-500/5 blur-[100px] pointer-events-none" />
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="w-full max-w-[380px]"
+        >
+          {/* Mobile logo */}
+          <div className="flex items-center gap-3 mb-10 lg:hidden">
+            <Image src={logo} alt="RMGC" width={32} height={32} className="rounded-xl object-cover" />
+            <p className="font-extrabold text-[15px] text-[#111]">
+              <span className="text-orange-500">RM</span>GC
+            </p>
+          </div>
+
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-px w-6 bg-orange-500" />
+              <span className="text-[11px] font-bold tracking-[0.18em] text-orange-500 uppercase">
+                Welcome back
+              </span>
+            </div>
+            <h1 className="text-[28px] font-extrabold text-[#111] leading-tight">
+              Sign in to your account
+            </h1>
+            <p className="text-[13px] text-[#aaa] mt-2">
+              Don't have an account?{" "}
+              <Link href="/register" className="text-orange-500 font-semibold hover:underline">
+                Sign up free
+              </Link>
+            </p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+
+            {/* Username */}
+            <div>
+              <label className="text-[10px] font-bold tracking-[0.14em] text-[#aaa] uppercase mb-1.5 block">
+                Username
+              </label>
+              <div className={`flex items-center gap-3 border-2 rounded-xl px-4 py-3 transition-all duration-200 bg-white ${
+                focusedField === "username"
+                  ? "border-orange-500 shadow-[0_0_0_4px_rgba(249,115,22,0.08)]"
+                  : "border-[#f0f0f0] hover:border-[#e0e0e0]"
+              }`}>
+                <MdAlternateEmail className={`text-[17px] flex-shrink-0 transition-colors ${
+                  focusedField === "username" ? "text-orange-500" : "text-[#ccc]"
+                }`} />
+                <input
+                  type="text"
+                  placeholder="Enter your username"
+                  className="bg-transparent outline-none w-full text-[13.5px] text-[#111] placeholder:text-[#ccc]"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  onFocus={() => setFocusedField("username")}
+                  onBlur={() => setFocusedField(null)}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[10px] font-bold tracking-[0.14em] text-[#aaa] uppercase block">
+                  Password
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-[11px] text-orange-500 font-semibold hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <div className={`flex items-center gap-3 border-2 rounded-xl px-4 py-3 transition-all duration-200 bg-white ${
+                focusedField === "password"
+                  ? "border-orange-500 shadow-[0_0_0_4px_rgba(249,115,22,0.08)]"
+                  : "border-[#f0f0f0] hover:border-[#e0e0e0]"
+              }`}>
+                <FaFingerprint className={`text-[17px] flex-shrink-0 transition-colors ${
+                  focusedField === "password" ? "text-orange-500" : "text-[#ccc]"
+                }`} />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  className="bg-transparent outline-none w-full text-[13.5px] text-[#111] placeholder:text-[#ccc]"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() => setFocusedField("password")}
+                  onBlur={() => setFocusedField(null)}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-[#ccc] hover:text-orange-500 transition-colors flex-shrink-0"
+                >
+                  {showPassword ? <FaRegEyeSlash className="text-[15px]" /> : <FaRegEye className="text-[15px]" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Error */}
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  className="flex items-center gap-2.5 bg-red-50 border border-red-100 text-red-400 text-[12px] font-medium px-4 py-3 rounded-xl"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
+                  {error}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading || !username || !password}
+              className="w-full flex items-center justify-center gap-2.5 bg-[#111] hover:bg-orange-500 disabled:bg-[#f5f5f5] disabled:text-[#ccc] text-white text-[13.5px] font-bold py-3.5 rounded-xl transition-all duration-200 mt-2"
+            >
+              {loading ? (
+                <ClipLoader size={14} color="#fff" />
+              ) : (
+                <>
+                  Sign in
+                  <HiArrowRight className="text-[15px]" />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-6">
+            <div className="h-px flex-1 bg-[#f5f5f5]" />
+            <span className="text-[11px] text-[#ddd]">or</span>
+            <div className="h-px flex-1 bg-[#f5f5f5]" />
+          </div>
+
+          {/* Register CTA */}
+          <Link href="/register">
+            <div className="w-full flex items-center justify-center gap-2 text-[13px] font-semibold text-[#888] hover:text-orange-500 border border-[#f0f0f0] hover:border-orange-200 py-3 rounded-xl transition-all">
+              Create a new account →
+            </div>
+          </Link>
+
+          {/* Footer note */}
+          <p className="text-center text-[11px] text-[#ddd] mt-6 leading-relaxed">
+            By signing in, you agree to our{" "}
+            <Link href="/terms-privacy" className="text-[#bbb] hover:text-orange-500 transition-colors">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/terms-privacy" className="text-[#bbb] hover:text-orange-500 transition-colors">
+              Privacy Policy
+            </Link>
+          </p>
+        </motion.div>
       </div>
     </div>
   );

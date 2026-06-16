@@ -72,3 +72,11 @@ h5,
 h6 {
   font-family: var(--font-merriweather);
 }
+
+/* Scrollbar hide utility */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

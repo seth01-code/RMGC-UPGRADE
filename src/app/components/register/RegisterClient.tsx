@@ -5,8 +5,24 @@ import { useRouter } from "next/navigation";
 import upload from "../../utils/upload";
 import newRequest from "../../utils/newRequest";
 import { toast } from "react-toastify";
-import { Eye, EyeOff, Upload } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
+
+// ── Shared field primitives ───────────────────────────────────────────────────
+
+const Label = ({ children, hint }: { children: React.ReactNode; hint?: string }) => (
+  <div className="flex items-center justify-between mb-1.5">
+    <label className="block text-[11px] font-bold tracking-[0.12em] text-[#888] uppercase">
+      {children}
+    </label>
+    {hint && <span className="text-[10.5px] text-[#ccc]">{hint}</span>}
+  </div>
+);
+
+const inputCls =
+  "w-full px-3.5 py-2.5 text-[13.5px] text-[#111] bg-white border border-[#e8e8e8] rounded-xl placeholder:text-[#ccc] focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all";
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function RegisterClient() {
   const router = useRouter();
@@ -14,6 +30,7 @@ export default function RegisterClient() {
   const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [ageError, setAgeError] = useState(false);
 
   const [client, setClient] = useState({
     username: "",
@@ -28,26 +45,19 @@ export default function RegisterClient() {
     isSeller: false,
   });
 
-  const togglePasswordVisibility = () => setShowPassword((prev) => !prev);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setClient((prev) => ({ ...prev, [name]: value }));
 
     if (name === "dob") {
-      const birthDate = new Date(value);
+      const birth = new Date(value);
       const today = new Date();
       const age =
         today.getFullYear() -
-        birthDate.getFullYear() -
-        (today <
-        new Date(today.getFullYear(), birthDate.getMonth(), birthDate.getDate())
-          ? 1
-          : 0);
-
-      if (age < 18) {
-        toast.error("You must be at least 18 years old to register.");
-      }
+        birth.getFullYear() -
+        (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate()) ? 1 : 0);
+      setAgeError(age < 18);
+      if (age < 18) toast.error("You must be at least 18 years old to register.");
     }
   };
 
@@ -61,6 +71,7 @@ export default function RegisterClient() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (ageError) { toast.error("You must be at least 18 years old."); return; }
     setLoading(true);
 
     let imageUrl = client.img;
@@ -69,214 +80,147 @@ export default function RegisterClient() {
         const uploaded = await upload(file);
         imageUrl = uploaded?.url || "";
       } catch {
-        toast.error("Error uploading image");
+        toast.error("Image upload failed. Try again.");
         setLoading(false);
         return;
       }
     }
 
-    const payload = { ...client, img: imageUrl };
-
     try {
-      await newRequest.post("/auth/register", payload);
-      toast.success("OTP sent! Please check your email.");
+      await newRequest.post("/auth/register", { ...client, img: imageUrl });
+      toast.success("OTP sent — check your email.");
       router.push(`/verify-otp?email=${encodeURIComponent(client.email)}`);
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Registration failed");
+      toast.error(err?.response?.data?.message || "Registration failed.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-orange-100 px-4 py-8 md:py-12 font-sans">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-2xl bg-white shadow-xl rounded-2xl p-6 md:p-10 border border-orange-200 overflow-hidden"
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+
+      {/* Avatar */}
+      <div className="flex items-center gap-4">
+        <label htmlFor="clientAvatar" className="cursor-pointer group relative shrink-0">
+          <div className="w-16 h-16 rounded-2xl border-2 border-dashed border-[#e0e0e0] group-hover:border-orange-400 bg-[#fafafa] overflow-hidden flex items-center justify-center transition-all">
+            {preview ? (
+              <Image src={preview} alt="Preview" fill className="object-cover rounded-2xl" />
+            ) : (
+              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" className="text-[#ccc] group-hover:text-orange-400 transition-colors">
+                <circle cx="11" cy="8" r="4" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M3 20c0-4.418 3.582-8 8-8s8 3.582 8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+            )}
+          </div>
+          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center shadow">
+            <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+              <path d="M4.5 1.5v6M1.5 4.5h6" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <input id="clientAvatar" type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+        </label>
+        <div>
+          <p className="text-[13px] font-bold text-[#111]">Profile photo</p>
+          <p className="text-[11.5px] text-[#bbb] mt-0.5">JPG or PNG · optional</p>
+        </div>
+      </div>
+
+      {/* Fields */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        <div className="sm:col-span-2">
+          <Label>Full name</Label>
+          <input name="fullName" type="text" placeholder="e.g. Adaeze Okafor" value={client.fullName} onChange={handleChange} className={inputCls} required />
+        </div>
+
+        <div>
+          <Label>Username</Label>
+          <input name="username" type="text" placeholder="e.g. adaeze_ok" value={client.username} onChange={handleChange} className={inputCls} required />
+        </div>
+
+        <div>
+          <Label>Email</Label>
+          <input name="email" type="email" placeholder="you@example.com" value={client.email} onChange={handleChange} className={inputCls} required />
+        </div>
+
+        <div className="sm:col-span-2">
+          <Label hint="Min. 8 characters">Password</Label>
+          <div className="relative">
+            <input
+              name="password"
+              type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
+              value={client.password}
+              onChange={handleChange}
+              className={`${inputCls} pr-10`}
+              required
+            />
+            <button type="button" onClick={() => setShowPassword((p) => !p)}
+              className="absolute inset-y-0 right-3 flex items-center text-[#bbb] hover:text-[#666] transition">
+              {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <Label hint="Must be 18+">Date of birth</Label>
+          <input
+            name="dob" type="date" value={client.dob} onChange={handleChange}
+            className={`${inputCls} ${ageError ? "border-red-300 focus:border-red-400 focus:ring-red-100" : ""}`}
+            required
+          />
+          {ageError && (
+            <p className="text-[11px] text-red-500 mt-1.5 flex items-center gap-1">
+              <span>⚠</span> Must be 18 or older to register
+            </p>
+          )}
+        </div>
+
+        <div>
+          <Label>Country</Label>
+          <input name="country" type="text" placeholder="Nigeria" value={client.country} onChange={handleChange} className={inputCls} />
+        </div>
+
+        <div>
+          <Label>State of residence</Label>
+          <input name="stateOfResidence" type="text" placeholder="Lagos" value={client.stateOfResidence} onChange={handleChange} className={inputCls} />
+        </div>
+
+        <div>
+          <Label>Phone</Label>
+          <input name="phone" type="text" placeholder="+234 800 000 0000" className={inputCls} />
+        </div>
+
+        <div className="sm:col-span-2">
+          <Label>Address</Label>
+          <input name="address" type="text" placeholder="123 Main Street, Ikeja" value={client.address} onChange={handleChange} className={inputCls} />
+        </div>
+      </div>
+
+      {/* Terms */}
+      <p className="text-[11.5px] text-[#bbb] leading-relaxed">
+        By creating an account you agree to RMGC's{" "}
+        <a href="/terms" className="text-orange-500 font-semibold hover:underline">Terms of Service</a>{" "}
+        and{" "}
+        <a href="/privacy" className="text-orange-500 font-semibold hover:underline">Privacy Policy</a>.
+      </p>
+
+      {/* Submit */}
+      <button
+        type="submit"
+        disabled={loading || ageError}
+        className="w-full py-3.5 bg-[#0A0A0A] hover:bg-orange-500 text-white text-[13.5px] font-black tracking-wide rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-2"
       >
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8 text-center">
-          Register as <span className="text-orange-500">Client</span>
-        </h1>
-
-        {/* Avatar Upload */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="relative w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32">
-            <div className="w-full h-full rounded-full overflow-hidden border-4 border-orange-300 shadow-md bg-orange-50 flex items-center justify-center">
-              {preview ? (
-                <Image
-                  src={preview}
-                  alt="Preview"
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <Upload className="w-8 sm:w-10 h-8 sm:h-10 text-orange-400" />
-              )}
-            </div>
-            <label
-              htmlFor="fileUploadWorker"
-              className="absolute -bottom-2 right-1 sm:right-2 bg-orange-500 hover:bg-orange-600 text-white text-xs sm:text-sm px-3 py-1 rounded-full cursor-pointer shadow-md transition"
-            >
-              Upload
-            </label>
-            <input
-              id="fileUploadWorker"
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Full Name */}
-          <div className="col-span-1 md:col-span-2">
-            <label className="block text-sm font-semibold text-gray-800 mb-1">
-              Full Name
-            </label>
-            <input
-              name="fullName"
-              type="text"
-              placeholder="John Doe"
-              value={client.fullName}
-              onChange={handleChange}
-              className="mt-1 p-3 border rounded-xl w-full text-black placeholder-gray-500 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
-              required
-            />
-          </div>
-
-          {/* Username */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-1">
-              Username
-            </label>
-            <input
-              name="username"
-              type="text"
-              placeholder="johndoe123"
-              value={client.username}
-              onChange={handleChange}
-              className="mt-1 p-3 border rounded-xl w-full text-black placeholder-gray-500 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
-              required
-            />
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-1">
-              Email
-            </label>
-            <input
-              name="email"
-              type="email"
-              placeholder="you@example.com"
-              value={client.email}
-              onChange={handleChange}
-              className="mt-1 p-3 border rounded-xl w-full text-black placeholder-gray-500 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
-              required
-            />
-          </div>
-
-          {/* Password */}
-          <div className="col-span-1 md:col-span-2">
-            <label className="block text-sm font-semibold text-gray-800 mb-1">
-              Password
-            </label>
-            <div className="relative mt-1">
-              <input
-                name="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                value={client.password}
-                onChange={handleChange}
-                className="p-3 border rounded-xl w-full text-black pr-12 placeholder-gray-500 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
-                required
-              />
-              <button
-                type="button"
-                onClick={togglePasswordVisibility}
-                className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700 transition"
-              >
-                {showPassword ? (
-                  <EyeOff className="w-5 h-5" />
-                ) : (
-                  <Eye className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* DOB */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-1">
-              Date of Birth
-            </label>
-            <input
-              name="dob"
-              type="date"
-              value={client.dob}
-              onChange={handleChange}
-              className="mt-1 p-3 border rounded-xl w-full text-black focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
-              required
-            />
-          </div>
-
-          {/* Country */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-1">
-              Country
-            </label>
-            <input
-              name="country"
-              type="text"
-              placeholder="Nigeria"
-              value={client.country}
-              onChange={handleChange}
-              className="mt-1 p-3 border rounded-xl w-full text-black placeholder-gray-500 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
-            />
-          </div>
-
-          {/* State of Residence */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-1">
-              State of Residence
-            </label>
-            <input
-              name="stateOfResidence"
-              type="text"
-              placeholder="Lagos"
-              value={client.stateOfResidence}
-              onChange={handleChange}
-              className="mt-1 p-3 border rounded-xl w-full text-black placeholder-gray-500 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
-            />
-          </div>
-
-          {/* Address */}
-          <div className="col-span-1 md:col-span-2">
-            <label className="block text-sm font-semibold text-gray-800 mb-1">
-              Address
-            </label>
-            <input
-              name="address"
-              type="text"
-              placeholder="123 Main Street"
-              value={client.address}
-              onChange={handleChange}
-              className="mt-1 p-3 border rounded-xl w-full text-black placeholder-gray-500 focus:ring-2 focus:ring-orange-400 focus:border-orange-400 outline-none transition-all"
-            />
-          </div>
-        </div>
-
-        {/* Submit */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-8 w-full py-3.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold tracking-wide transition-transform transform hover:scale-[1.02] disabled:opacity-50"
-        >
-          {loading ? "Registering..." : "Register & Continue"}
-        </button>
-      </form>
-    </div>
+        {loading ? (
+          <>
+            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            Creating account…
+          </>
+        ) : (
+          "Create account →"
+        )}
+      </button>
+    </form>
   );
 }
