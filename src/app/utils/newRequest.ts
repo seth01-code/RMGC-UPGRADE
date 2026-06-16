@@ -3,7 +3,7 @@ import axios from "axios";
 const newRequest = axios.create({
   baseURL:
     process.env.NEXT_PUBLIC_API_URL ||
-    "http://localhost:4000/api",
+    "https://api.renewedmindsglobalconsult.com/api",
   withCredentials: true,
 });
 
