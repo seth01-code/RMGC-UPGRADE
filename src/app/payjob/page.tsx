@@ -6,9 +6,9 @@ import { useParams } from "next/navigation";
 import Image from "next/image";
 import newRequest from "../utils/newRequest";
 import { useTranslation } from "react-i18next";
-import FlutterwaveLogo from "../../../../assets/images/flutterwave-logo-removebg-preview.png";
-import PaystackLogo from "../../../../assets/images/Paystack-removebg-preview.png";
-import backgroundImage from "../../../../assets/bill-6107551_1920.png";
+import FlutterwaveLogo from "../../assets/images/flutterwave-logo-removebg-preview.png";
+import PaystackLogo from "../../assets/images/Paystack-removebg-preview.png";
+import backgroundImage from "../../assets/bill-6107551_1920.png";
 import { FaLock, FaCheckCircle, FaChevronRight, FaShieldAlt, FaGlobe } from "react-icons/fa";
 
 const OR = "#FF6B1A";
