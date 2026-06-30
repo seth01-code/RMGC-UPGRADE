@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const newRequest = axios.create({
-  baseURL: "https://api.renewedmindsglobalconsult.com/",
+  baseURL: "https://api.renewedmindsglobalconsult.com/api",
   withCredentials: true,
 });
 
