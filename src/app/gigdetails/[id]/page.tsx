@@ -1,14 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination as SwiperPagination } from "swiper/modules";
-// @ts-ignore
 import "swiper/css";
-// @ts-ignore
 import "swiper/css/navigation";
-// @ts-ignore
 import "swiper/css/pagination";
 import { useQuery } from "@tanstack/react-query";
 import newRequest from "../../utils/newRequest";
@@ -18,7 +16,14 @@ import { MdVerified } from "react-icons/md";
 import { FaCheckDouble, FaGlobe, FaRegCalendarAlt } from "react-icons/fa";
 import { HiArrowLeft } from "react-icons/hi";
 import { TbRefresh } from "react-icons/tb";
-import { LuClock4, LuBriefcase, LuLayers, LuAward, LuCircleCheck, LuFolderOpen } from "react-icons/lu";
+import {
+  LuClock4,
+  LuBriefcase,
+  LuLayers,
+  LuAward,
+  LuCircleCheck,
+  LuFolderOpen,
+} from "react-icons/lu";
 import Link from "next/link";
 import moment from "moment";
 import { useExchangeRate } from "../../hooks/useExchangeRate";
@@ -89,7 +94,7 @@ const FALLBACK_AVATAR =
 
 const GigSkeleton = () => (
   <div className="animate-pulse flex flex-col gap-0">
-    <div className="w-full h-[420px] md:h-[500px] bg-neutral-100" />
+    <div className="w-full h-105 md:h-125 bg-neutral-100" />
     <div className="max-w-6xl mx-auto px-4 md:px-8 py-10 grid grid-cols-1 lg:grid-cols-3 gap-10 w-full">
       <div className="lg:col-span-2 flex flex-col gap-5">
         <div className="h-3 w-24 bg-neutral-100 rounded-full" />
@@ -100,7 +105,11 @@ const GigSkeleton = () => (
         </div>
         <div className="space-y-2 mt-4">
           {[90, 82, 74, 60].map((w) => (
-            <div key={w} className="h-3 bg-neutral-100 rounded-full" style={{ width: `${w}%` }} />
+            <div
+              key={w}
+              className="h-3 bg-neutral-100 rounded-full"
+              style={{ width: `${w}%` }}
+            />
           ))}
         </div>
       </div>
@@ -113,20 +122,29 @@ const GigSkeleton = () => (
 // STAR RATING
 // ─────────────────────────────────────────────
 
-const StarRating = ({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" }) => {
+const StarRating = ({
+  rating,
+  size = "sm",
+}: {
+  rating: number;
+  size?: "sm" | "md";
+}) => {
   const filled = Math.round(rating);
   const sz = size === "md" ? "text-[18px]" : "text-[14px]";
   return (
     <div className="flex items-center gap-0.5">
       {Array.from({ length: 5 }).map((_, i) => (
-        <IoMdStar key={i} className={`${sz} ${i < filled ? "text-amber-400" : "text-neutral-200"}`} />
+        <IoMdStar
+          key={i}
+          className={`${sz} ${i < filled ? "text-amber-400" : "text-neutral-200"}`}
+        />
       ))}
     </div>
   );
 };
 
 // ─────────────────────────────────────────────
-// PORTFOLIO SECTION (shown inside About Me tab)
+// PORTFOLIO SECTION (shown inside About tab)
 // ─────────────────────────────────────────────
 
 const PortfolioSection = ({ portfolio }: { portfolio: Portfolio }) => {
@@ -134,8 +152,6 @@ const PortfolioSection = ({ portfolio }: { portfolio: Portfolio }) => {
 
   return (
     <div className="flex flex-col gap-5 mt-6 pt-6 border-t border-neutral-100">
-
-      {/* Skills */}
       {portfolio.skills && portfolio.skills.length > 0 && (
         <div>
           <p className="text-[10px] font-bold tracking-[0.15em] text-[#f97316] uppercase mb-3 flex items-center gap-1.5">
@@ -154,7 +170,6 @@ const PortfolioSection = ({ portfolio }: { portfolio: Portfolio }) => {
         </div>
       )}
 
-      {/* Industries */}
       {portfolio.industries && portfolio.industries.length > 0 && (
         <div>
           <p className="text-[10px] font-bold tracking-[0.15em] text-[#f97316] uppercase mb-3 flex items-center gap-1.5">
@@ -173,7 +188,6 @@ const PortfolioSection = ({ portfolio }: { portfolio: Portfolio }) => {
         </div>
       )}
 
-      {/* Certifications */}
       {portfolio.certifications && portfolio.certifications.length > 0 && (
         <div>
           <p className="text-[10px] font-bold tracking-[0.15em] text-[#f97316] uppercase mb-3 flex items-center gap-1.5">
@@ -181,7 +195,10 @@ const PortfolioSection = ({ portfolio }: { portfolio: Portfolio }) => {
           </p>
           <div className="flex flex-col gap-2">
             {portfolio.certifications.map((cert, i) => (
-              <div key={i} className="flex items-center gap-2 text-[12px] text-neutral-700">
+              <div
+                key={i}
+                className="flex items-center gap-2 text-[12px] text-neutral-700"
+              >
                 <LuCircleCheck className="text-green-500 text-[13px] shrink-0" />
                 {cert}
               </div>
@@ -190,7 +207,6 @@ const PortfolioSection = ({ portfolio }: { portfolio: Portfolio }) => {
         </div>
       )}
 
-      {/* Projects */}
       {portfolio.projects && portfolio.projects.length > 0 && (
         <div>
           <p className="text-[10px] font-bold tracking-[0.15em] text-[#f97316] uppercase mb-3 flex items-center gap-1.5">
@@ -202,12 +218,14 @@ const PortfolioSection = ({ portfolio }: { portfolio: Portfolio }) => {
                 key={i}
                 className="bg-neutral-50 border border-neutral-100 rounded-xl p-4 flex flex-col gap-2"
               >
-                <p className="text-[13px] font-bold text-neutral-900">{proj.name}</p>
-
+                <p className="text-[13px] font-bold text-neutral-900">
+                  {proj.name}
+                </p>
                 {proj.description && (
-                  <p className="text-[12px] text-neutral-500 leading-relaxed">{proj.description}</p>
+                  <p className="text-[12px] text-neutral-500 leading-relaxed">
+                    {proj.description}
+                  </p>
                 )}
-
                 {proj.technologies?.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {proj.technologies.map((tech, ti) => (
@@ -220,7 +238,6 @@ const PortfolioSection = ({ portfolio }: { portfolio: Portfolio }) => {
                     ))}
                   </div>
                 )}
-
                 {proj.outcomes && (
                   <p className="text-[11px] font-semibold text-green-600">
                     ↗ {proj.outcomes}
@@ -243,8 +260,14 @@ const GigDetails: React.FC = () => {
   const params = useParams();
   const gigId = params.id as string;
   const [activeTab, setActiveTab] = useState<"about" | "seller">("about");
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const prevRef = useRef<HTMLDivElement>(null);
   const nextRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("currentUser");
+    if (stored) setCurrentUser(JSON.parse(stored));
+  }, []);
 
   const { data, isLoading, error } = useQuery<GigData>({
     queryKey: ["gig", gigId],
@@ -266,18 +289,33 @@ const GigDetails: React.FC = () => {
     queryFn: () => newRequest.get("/users/me").then((r) => r.data),
   });
 
-  const { exchangeRate, currencySymbol } = useExchangeRate(userData?.country || "United States");
+  const { exchangeRate, currencySymbol } = useExchangeRate(
+    userData?.country || "United States",
+  );
 
-  const memberSince = dataUser ? moment(dataUser.createdAt).format("MMM YYYY") : "";
-  const rating = data && data.starNumber > 0 ? data.totalStars / data.starNumber : null;
+  const memberSince = dataUser
+    ? moment(dataUser.createdAt).format("MMM YYYY")
+    : "";
+  const rating =
+    data && data.starNumber > 0 ? data.totalStars / data.starNumber : null;
   const allMedia = data
-    ? [...(data.images || []), ...(data.videos || []), ...(data.documents || [])]
+    ? [
+        ...(data.images || []),
+        ...(data.videos || []),
+        ...(data.documents || []),
+      ]
     : [];
   const formattedPrice = data
-    ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(data.price * exchangeRate)
+    ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(
+        data.price * exchangeRate,
+      )
     : "";
 
   const hasPortfolio = dataUser?.portfolio?.status === "completed";
+  const backHref = currentUser?.isAdmin ? "/admin" : "/seller";
+  const sellerTabLabel = currentUser?.isAdmin
+    ? "About the Freelancer"
+    : "About Me";
 
   if (isLoading) return <GigSkeleton />;
 
@@ -288,8 +326,12 @@ const GigDetails: React.FC = () => {
           <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">⚠</span>
           </div>
-          <h2 className="text-[17px] font-bold text-neutral-900 mb-1">Couldn&apos;t load this gig</h2>
-          <p className="text-[13px] text-neutral-400">Try refreshing the page or come back shortly.</p>
+          <h2 className="text-[17px] font-bold text-neutral-900 mb-1">
+            Couldn&apos;t load this gig
+          </h2>
+          <p className="text-[13px] text-neutral-400">
+            Try refreshing the page or come back shortly.
+          </p>
           <button
             onClick={() => window.location.reload()}
             className="mt-5 px-5 py-2.5 bg-[#f97316] text-white text-[13px] font-bold rounded-xl hover:bg-orange-600 transition"
@@ -302,13 +344,11 @@ const GigDetails: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#fafafa] flex flex-col">
-
       {/* ── HERO MEDIA ── */}
       <div className="relative w-full bg-neutral-950 select-none">
-
         <div className="absolute top-4 left-4 z-20">
           <Link
-            href="/seller"
+            href={backHref}
             className="inline-flex items-center gap-2 bg-black/40 backdrop-blur-sm border border-white/15 text-white text-[11px] font-semibold px-3.5 py-2 rounded-full hover:bg-black/60 transition"
           >
             <HiArrowLeft className="text-[12px]" />
@@ -332,7 +372,9 @@ const GigDetails: React.FC = () => {
             </div>
 
             <div className="absolute bottom-4 right-4 z-20 bg-[#f97316] text-white px-4 py-2.5 rounded-2xl">
-              <p className="text-[10px] font-semibold tracking-widest uppercase opacity-75 mb-0.5">Listed at</p>
+              <p className="text-[10px] font-semibold tracking-widest uppercase opacity-75 mb-0.5">
+                Listed at
+              </p>
               <p className="text-[20px] font-black leading-none tracking-tight">
                 {currencySymbol} {formattedPrice}
               </p>
@@ -355,22 +397,35 @@ const GigDetails: React.FC = () => {
                 }
               }}
               modules={[Navigation, SwiperPagination]}
-              className="w-full h-[340px] md:h-[460px] [&_.swiper-wrapper]:h-full [&_.swiper-slide]:h-full"
+              className="w-full h-85 md:h-115 [&_.swiper-wrapper]:h-full [&_.swiper-slide]:h-full"
             >
               {allMedia.map((fileUrl, i) => {
                 const isImage = /\.(jpeg|jpg|png|gif|webp)$/i.test(fileUrl);
                 const isVideo = /\.(mp4|webm|ogg)$/i.test(fileUrl);
                 const isPDF = /\.pdf$/i.test(fileUrl);
                 return (
-                  <SwiperSlide key={i} className="relative !h-full">
+                  <SwiperSlide key={i} className="relative h-full!">
                     {isImage ? (
-                      <Image src={fileUrl} alt={`Media ${i + 1}`} fill className="object-contain" sizes="100vw" unoptimized />
+                      <Image
+                        src={fileUrl}
+                        alt={`Media ${i + 1}`}
+                        fill
+                        className="object-contain"
+                        sizes="100vw"
+                        unoptimized
+                      />
                     ) : isVideo ? (
-                      <video src={fileUrl} controls className="w-full h-full object-contain" />
+                      <video
+                        src={fileUrl}
+                        controls
+                        className="w-full h-full object-contain"
+                      />
                     ) : isPDF ? (
                       <iframe src={fileUrl} className="w-full h-full" />
                     ) : (
-                      <div className="flex items-center justify-center h-full text-white/40 text-sm">Unsupported format</div>
+                      <div className="flex items-center justify-center h-full text-white/40 text-sm">
+                        Unsupported format
+                      </div>
                     )}
                   </SwiperSlide>
                 );
@@ -378,7 +433,7 @@ const GigDetails: React.FC = () => {
             </Swiper>
           </>
         ) : (
-          <div className="w-full h-[240px] flex items-center justify-center text-white/30 text-sm">
+          <div className="w-full h-60 flex items-center justify-center text-white/30 text-sm">
             No media uploaded yet
           </div>
         )}
@@ -387,10 +442,8 @@ const GigDetails: React.FC = () => {
       {/* ── BODY ── */}
       <div className="flex-1">
         <div className="max-w-6xl mx-auto px-4 md:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-
           {/* ── LEFT ── */}
           <div className="lg:col-span-2 flex flex-col gap-7">
-
             {/* Title + author */}
             <div className="flex flex-col gap-4">
               {data.cat && (
@@ -415,7 +468,9 @@ const GigDetails: React.FC = () => {
                   </div>
                   <div>
                     <div className="flex items-center gap-1">
-                      <p className="text-[13px] font-bold text-neutral-900">{dataUser.username}</p>
+                      <p className="text-[13px] font-bold text-neutral-900">
+                        {dataUser.username}
+                      </p>
                       <MdVerified className="text-[#f97316] text-[12px]" />
                     </div>
                     {dataUser.country && (
@@ -427,7 +482,9 @@ const GigDetails: React.FC = () => {
                   {rating !== null && (
                     <div className="ml-auto flex items-center gap-1.5 bg-white border border-neutral-100 px-3 py-1.5 rounded-xl">
                       <StarRating rating={rating} />
-                      <span className="text-[12px] font-bold text-neutral-900">{rating.toFixed(1)}</span>
+                      <span className="text-[12px] font-bold text-neutral-900">
+                        {rating.toFixed(1)}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -446,7 +503,7 @@ const GigDetails: React.FC = () => {
                       : "border-transparent text-neutral-400 hover:text-neutral-600"
                   }`}
                 >
-                  {tab === "about" ? "Gig details" : "About Me"}
+                  {tab === "about" ? "Gig details" : sellerTabLabel}
                 </button>
               ))}
             </div>
@@ -455,7 +512,7 @@ const GigDetails: React.FC = () => {
             {activeTab === "about" ? (
               <div className="flex flex-col gap-5">
                 <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-                  <p className="text-[14px] text-neutral-500 leading-relaxed whitespace-pre-line break-words">
+                  <p className="text-[14px] text-neutral-500 leading-relaxed whitespace-pre-line wrap-break-word">
                     {data.desc}
                   </p>
                 </div>
@@ -467,7 +524,10 @@ const GigDetails: React.FC = () => {
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {data.features.map((f, i) => (
-                        <div key={i} className="flex items-start gap-2.5 text-[13px] text-neutral-600">
+                        <div
+                          key={i}
+                          className="flex items-start gap-2.5 text-[13px] text-neutral-600"
+                        >
                           <FaCheckDouble className="text-[#f97316] mt-0.5 shrink-0 text-[11px]" />
                           <span>{f}</span>
                         </div>
@@ -484,14 +544,14 @@ const GigDetails: React.FC = () => {
                 </div>
               </div>
             ) : (
-              // ── ABOUT ME TAB ──
+              // ── SELLER / FREELANCER TAB ──
               dataUser && (
                 <div className="bg-white rounded-2xl border border-neutral-100 overflow-hidden">
                   {/* Cover + avatar */}
                   <div className="relative h-24 bg-neutral-900">
                     <div className="absolute inset-0 bg-[#f97316]/10" />
                     <div className="absolute -bottom-9 left-6">
-                      <div className="relative w-[72px] h-[72px] rounded-2xl overflow-hidden ring-4 ring-white shadow-md">
+                      <div className="relative w-18 h-18 rounded-2xl overflow-hidden ring-4 ring-white shadow-md">
                         <Image
                           src={dataUser.img || FALLBACK_AVATAR}
                           alt={dataUser.username}
@@ -508,7 +568,9 @@ const GigDetails: React.FC = () => {
                     <div className="flex items-start justify-between gap-4 flex-wrap">
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <p className="text-[16px] font-black text-neutral-900">{dataUser.username}</p>
+                          <p className="text-[16px] font-black text-neutral-900">
+                            {dataUser.username}
+                          </p>
                           <MdVerified className="text-[#f97316] text-[14px]" />
                         </div>
                         <p className="text-[13px] text-neutral-500 mt-1 max-w-md leading-relaxed">
@@ -518,7 +580,9 @@ const GigDetails: React.FC = () => {
                       {rating !== null && (
                         <div className="flex items-center gap-1.5 bg-neutral-50 border border-neutral-100 px-3 py-2 rounded-xl shrink-0">
                           <StarRating rating={rating} size="md" />
-                          <span className="text-[13px] font-bold text-neutral-900">{rating.toFixed(1)}</span>
+                          <span className="text-[13px] font-bold text-neutral-900">
+                            {rating.toFixed(1)}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -526,21 +590,41 @@ const GigDetails: React.FC = () => {
                     {/* Stats row */}
                     <div className="mt-6 pt-5 border-t border-neutral-100 grid grid-cols-2 sm:grid-cols-4 gap-5">
                       {[
-                        { icon: <FaGlobe className="text-[11px]" />, label: "From", value: dataUser.country || "—" },
-                        { icon: <FaRegCalendarAlt className="text-[11px]" />, label: "Member since", value: memberSince || "—" },
-                        { icon: <FaGlobe className="text-[11px]" />, label: "Languages", value: dataUser.languages?.join(", ") || "—" },
-                        { icon: <LuBriefcase className="text-[11px]" />, label: "Experience", value: dataUser.yearsOfExperience ? `${dataUser.yearsOfExperience} yrs` : "—" },
+                        {
+                          icon: <FaGlobe className="text-[11px]" />,
+                          label: "From",
+                          value: dataUser.country || "—",
+                        },
+                        {
+                          icon: <FaRegCalendarAlt className="text-[11px]" />,
+                          label: "Member since",
+                          value: memberSince || "—",
+                        },
+                        {
+                          icon: <FaGlobe className="text-[11px]" />,
+                          label: "Languages",
+                          value: dataUser.languages?.join(", ") || "—",
+                        },
+                        {
+                          icon: <LuBriefcase className="text-[11px]" />,
+                          label: "Experience",
+                          value: dataUser.yearsOfExperience
+                            ? `${dataUser.yearsOfExperience} yrs`
+                            : "—",
+                        },
                       ].map((stat) => (
                         <div key={stat.label} className="flex flex-col gap-1">
                           <p className="text-[10px] font-bold tracking-wider text-neutral-300 uppercase flex items-center gap-1">
                             {stat.icon} {stat.label}
                           </p>
-                          <p className="text-[13px] font-semibold text-neutral-700 truncate">{stat.value}</p>
+                          <p className="text-[13px] font-semibold text-neutral-700 truncate">
+                            {stat.value}
+                          </p>
                         </div>
                       ))}
                     </div>
 
-                    {/* Portfolio section — only renders if status is completed */}
+                    {/* Portfolio section */}
                     {hasPortfolio && (
                       <PortfolioSection portfolio={dataUser.portfolio!} />
                     )}
@@ -564,14 +648,18 @@ const GigDetails: React.FC = () => {
                   {rating !== null && (
                     <div className="flex items-center gap-1 pb-0.5">
                       <StarRating rating={rating} />
-                      <span className="text-[11px] text-white/60 font-semibold">{rating.toFixed(1)}</span>
+                      <span className="text-[11px] text-white/60 font-semibold">
+                        {rating.toFixed(1)}
+                      </span>
                     </div>
                   )}
                 </div>
               </div>
 
               <div className="px-5 py-5 flex flex-col gap-5">
-                <p className="text-[13px] text-neutral-500 leading-relaxed">{data.shortDesc}</p>
+                <p className="text-[13px] text-neutral-500 leading-relaxed">
+                  {data.shortDesc}
+                </p>
 
                 <div className="flex items-center justify-between text-[12px] font-semibold text-neutral-600">
                   <div className="flex items-center gap-1.5">
@@ -580,7 +668,10 @@ const GigDetails: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <TbRefresh className="text-[#f97316] text-[14px]" />
-                    <span>{data.revisionNumber} revision{data.revisionNumber !== 1 ? "s" : ""}</span>
+                    <span>
+                      {data.revisionNumber} revision
+                      {data.revisionNumber !== 1 ? "s" : ""}
+                    </span>
                   </div>
                 </div>
 
@@ -589,7 +680,10 @@ const GigDetails: React.FC = () => {
                 {data.features.length > 0 && (
                   <div className="flex flex-col gap-2.5">
                     {data.features.map((f, i) => (
-                      <div key={i} className="flex items-start gap-2 text-[12px] text-neutral-500">
+                      <div
+                        key={i}
+                        className="flex items-start gap-2 text-[12px] text-neutral-500"
+                      >
                         <FaCheckDouble className="text-[#f97316] mt-0.5 shrink-0 text-[10px]" />
                         <span>{f}</span>
                       </div>
@@ -599,7 +693,6 @@ const GigDetails: React.FC = () => {
               </div>
             </div>
           </div>
-
         </div>
       </div>
 

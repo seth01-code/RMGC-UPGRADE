@@ -1,18 +1,28 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import newRequest from "../utils/newRequest";
 import { useExchangeRate } from "../hooks/useExchangeRate";
 import { useTranslation } from "react-i18next";
 import { RiMessage3Line } from "react-icons/ri";
-import { HiOutlineCheckCircle, HiOutlineXCircle } from "react-icons/hi";
+import {
+  HiOutlineCheckCircle,
+  HiOutlineXCircle,
+  HiOutlineExternalLink,
+} from "react-icons/hi";
 import { MdOutlineShoppingBag, MdOutlineWorkOutline } from "react-icons/md";
 import { BsPeopleFill } from "react-icons/bs";
 import ClipLoader from "react-spinners/ClipLoader";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
+
+/* ─── Types ─── */
 
 interface Order {
   _id: string;
@@ -23,6 +33,12 @@ interface Order {
   sellerId: string;
   buyerId: string;
   isCompleted: boolean;
+  // Job-post order: price is stored in USD and needs conversion to the
+  // viewer's local currency before display.
+  workId?: string;
+  // Gig order: price is already stored in the seller's local currency
+  // at the time of purchase, so it should be displayed as-is.
+  gigId?: string;
 }
 
 interface User {
@@ -30,6 +46,7 @@ interface User {
   username: string;
   img?: string;
   country?: string;
+  desc?: string;
 }
 
 interface OrdersData {
@@ -37,16 +54,9 @@ interface OrdersData {
   sellerOrders?: Order[];
 }
 
-// ── Placeholder types for future job posts feature ──
-interface JobPost {
-  _id: string;
-  title: string;
-  description: string;
-  budget?: number;
-  applicantsCount: number;
-  createdAt: string;
-  status: "open" | "closed";
-}
+/* ══════════════════════════════════════════════
+   MAIN ORDERS COMPONENT
+══════════════════════════════════════════════ */
 
 const Orders: React.FC = () => {
   const router = useRouter();
@@ -57,11 +67,16 @@ const Orders: React.FC = () => {
   const [completing, setCompleting] = useState<string | null>(null);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("currentUser");
-    if (storedUser) setCurrentUser(JSON.parse(storedUser));
+    const stored = localStorage.getItem("currentUser");
+    if (stored) setCurrentUser(JSON.parse(stored));
   }, []);
 
-  const { currencySymbol } = useExchangeRate(currentUser?.country);
+  const { currencySymbol, convertPrice } = useExchangeRate(
+    currentUser?.country,
+  );
+
+  const isSeller = currentUser?.isSeller;
+  const isClient = !isSeller && !currentUser?.isAdmin;
 
   const { isLoading, error, data } = useQuery<OrdersData>({
     queryKey: ["orders"],
@@ -69,32 +84,60 @@ const Orders: React.FC = () => {
   });
 
   useEffect(() => {
-    const fetchUserDetails = async (userId: string) => {
+    const fetchUser = async (userId: string) => {
       if (!userId || userDetails[userId]) return;
       try {
         const res = await newRequest.get(`/users/${userId}`);
         setUserDetails((prev) => ({ ...prev, [userId]: res.data }));
-      } catch (err) {
-        console.error("Error fetching user details:", err);
-      }
+      } catch {}
     };
     if (data) {
-      data.buyerOrders?.forEach((o) => fetchUserDetails(o.sellerId));
-      data.sellerOrders?.forEach((o) => fetchUserDetails(o.buyerId));
+      data.buyerOrders?.forEach((o) => fetchUser(o.sellerId));
+      data.sellerOrders?.forEach((o) => fetchUser(o.buyerId));
     }
   }, [data, userDetails]);
 
-  const handleContact = async (order: Order) => {
-    if (!currentUser) return;
-    const otherUserId = currentUser.seller ? order.buyerId : order.sellerId;
-    if (!currentUser.id || !otherUserId) return;
-    try {
-      await newRequest.post("/conversations", { userId: currentUser.id, otherUserId });
-      router.push("/chat");
-    } catch (err) {
-      console.error("Error opening conversation:", err);
+const handleContact = async (otherUserId: string) => {
+  if (!currentUser) return;
+  const myId = currentUser.id || currentUser._id;
+  if (!myId || !otherUserId) return;
+  try {
+    await newRequest.post("/conversations", { userId: myId, otherUserId });
+    router.push("/chat");
+  } catch (err: any) {
+    const status = err?.response?.status;
+    const message = err?.response?.data?.error || "";
+
+    if (status === 404 && message.toLowerCase().includes("not found")) {
+      toast.error("User Unavailable", {
+        description:
+          "This user has been suspended and can no longer be contacted.",
+        duration: 6000,
+        style: {
+          background: "#fff7f0",
+          border: "1px solid #fed7aa",
+          color: "#111",
+        },
+      });
+    } else if (status === 403) {
+      toast.error("Account Suspended", {
+        description:
+          "Your account has been suspended. You cannot send messages.",
+        duration: 6000,
+        style: {
+          background: "#fff7f0",
+          border: "1px solid #fed7aa",
+          color: "#111",
+        },
+      });
+    } else {
+      toast.error("Something went wrong", {
+        description: "Could not open this conversation. Please try again.",
+        duration: 5000,
+      });
     }
-  };
+  }
+};
 
   const handleCompleteOrder = async (orderId: string) => {
     setCompleting(orderId);
@@ -102,84 +145,75 @@ const Orders: React.FC = () => {
       await newRequest.patch(`/orders/${orderId}`, { isCompleted: true });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     } catch (err) {
-      console.error("Error updating order status:", err);
+      console.error(err);
     } finally {
       setCompleting(null);
     }
   };
 
   const formatPrice = (price: number) =>
-    price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    price.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
+  // Job-post orders (workId) store price in USD -> convert to local currency.
+const getDisplayPrice = (order: Order) => convertPrice(order.price);
 
   if (!currentUser || isLoading) {
     return (
-      <div className="flex items-center justify-center w-full h-[60vh] bg-white">
-        <ClipLoader size={36} color="#f97316" />
+      <div className="flex items-center justify-center w-full h-[60vh]">
+        <ClipLoader size={32} color="#f97316" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-[60vh] bg-white">
+      <div className="flex items-center justify-center h-[60vh]">
         <p className="text-[13px] text-red-400">{t("somethingWentWrong")}</p>
       </div>
     );
   }
 
-  const isSeller = currentUser?.isSeller;
-  const isClient = !isSeller && !currentUser?.isAdmin;
-
-  // ── Seller view ──
+  /* ── Seller view ── */
   if (isSeller) {
-    const orders = data?.sellerOrders || [];
-
+    const orders = data?.sellerOrders ?? [];
     return (
       <div className="min-h-screen bg-white">
-        <div className="max-w-screen-xl mx-auto px-6 md:px-12 py-12">
-
-          <div className="mb-10">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="h-px w-6 bg-orange-500" />
-              <span className="text-[11px] font-bold tracking-[0.18em] text-orange-500 uppercase">
-                Seller dashboard
-              </span>
-            </div>
-            <h1 className="text-[28px] md:text-[34px] font-extrabold text-[#111] leading-tight">
-              My sales
-            </h1>
-            <p className="text-[13px] text-[#aaa] mt-1.5">
-              Orders placed by clients for your gigs
-            </p>
-          </div>
-
+        <div className="max-w-3xl mx-auto px-6 md:px-12 py-12">
+          <PageHeader
+            eyebrow="Seller dashboard"
+            title="My sales"
+            sub="Orders placed by clients for your gigs"
+          />
           {orders.length === 0 ? (
             <EmptyState
-              icon={<MdOutlineShoppingBag className="text-[36px] text-[#e5e5e5]" />}
+              icon={
+                <MdOutlineShoppingBag className="text-[34px] text-[#ddd]" />
+              }
               title="No sales yet"
               sub="Orders from clients will appear here once they purchase your gigs."
             />
           ) : (
             <>
               <div className="space-y-3">
-                {orders.map((order, index) => {
-                  const user = userDetails[order.buyerId];
-                  return (
-                    <OrderCard
-                      key={order._id}
-                      order={order}
-                      user={user}
-                      index={index}
-                      currencySymbol={currencySymbol}
-                      formatPrice={formatPrice}
-                      isSeller
-                    />
-                  );
-                })}
+                {orders.map((order, i) => (
+                  <OrderCard
+                    key={order._id}
+                    order={order}
+                    user={userDetails[order.buyerId]}
+                    index={i}
+                    currencySymbol={currencySymbol}
+                    formatPrice={formatPrice}
+                    displayPrice={getDisplayPrice(order)}
+                    isSeller
+                  />
+                ))}
               </div>
               <SummaryFooter
                 count={orders.length}
-                total={orders.reduce((s, o) => s + o.price, 0)}
+                total={orders.reduce((s, o) => s + getDisplayPrice(o), 0)}
                 currencySymbol={currencySymbol}
                 formatPrice={formatPrice}
               />
@@ -190,164 +224,75 @@ const Orders: React.FC = () => {
     );
   }
 
-  // ── Client view ──
+  /* ── Client view ── */
   if (isClient) {
-    const purchases = data?.buyerOrders || [];
+    const purchases = data?.buyerOrders ?? [];
 
     return (
       <div className="min-h-screen bg-white">
-        <div className="max-w-screen-xl mx-auto px-6 md:px-12 py-12">
+        <div className="max-w-3xl mx-auto px-6 md:px-12 py-12">
+          <PageHeader
+            eyebrow="Client dashboard"
+            title="My orders"
+            sub="Gigs you've purchased from freelancers"
+          />
 
-          <div className="mb-10">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="h-px w-6 bg-orange-500" />
-              <span className="text-[11px] font-bold tracking-[0.18em] text-orange-500 uppercase">
-                Client dashboard
-              </span>
+          {/* Job posts shortcut banner */}
+          <Link
+            href="/jobs"
+            className="flex items-center gap-4 mb-8 p-4 border border-[#f0f0f0] hover:border-orange-100 bg-white rounded-2xl transition-all group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+              <BsPeopleFill className="text-orange-500 text-[18px]" />
             </div>
-            <h1 className="text-[28px] md:text-[34px] font-extrabold text-[#111] leading-tight">
-              My workspace
-            </h1>
-            <p className="text-[13px] text-[#aaa] mt-1.5">
-              Your purchases and job posts in one place
-            </p>
-          </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13.5px] font-semibold text-[#111]">
+                My job posts
+              </p>
+              <p className="text-[12px] text-[#bbb] mt-0.5">
+                View your listings and manage proposals from freelancers
+              </p>
+            </div>
+            <HiOutlineExternalLink className="text-[18px] text-[#ccc] group-hover:text-orange-400 transition-colors shrink-0" />
+          </Link>
 
-          {/* ── Two-column grid ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 items-start">
-
-            {/* Left — Purchased gigs */}
-            <div>
-              <SectionHeader
-                eyebrow="Purchased gigs"
-                title="My orders"
-                count={purchases.length}
-              />
-
-              {purchases.length === 0 ? (
-                <EmptyState
-                  icon={<MdOutlineShoppingBag className="text-[36px] text-[#e5e5e5]" />}
-                  title="No purchases yet"
-                  sub="Gigs you buy from freelancers will appear here."
-                />
-              ) : (
-                <>
-                  <div className="space-y-3">
-                    {purchases.map((order, index) => {
-                      const user = userDetails[order.sellerId];
-                      return (
-                        <OrderCard
-                          key={order._id}
-                          order={order}
-                          user={user}
-                          index={index}
-                          currencySymbol={currencySymbol}
-                          formatPrice={formatPrice}
-                          isSeller={false}
-                          onContact={() => handleContact(order)}
-                          onComplete={() => handleCompleteOrder(order._id)}
-                          completing={completing === order._id}
-                          t={t}
-                        />
-                      );
-                    })}
-                  </div>
-                  <SummaryFooter
-                    count={purchases.length}
-                    total={purchases.reduce((s, o) => s + o.price, 0)}
+          {/* Purchases */}
+          {purchases.length === 0 ? (
+            <EmptyState
+              icon={
+                <MdOutlineShoppingBag className="text-[34px] text-[#ddd]" />
+              }
+              title="No purchases yet"
+              sub="Gigs you buy from freelancers will appear here."
+            />
+          ) : (
+            <>
+              <div className="space-y-3">
+                {purchases.map((order, i) => (
+                  <OrderCard
+                    key={order._id}
+                    order={order}
+                    user={userDetails[order.sellerId]}
+                    index={i}
                     currencySymbol={currencySymbol}
                     formatPrice={formatPrice}
+                    displayPrice={getDisplayPrice(order)}
+                    isSeller={false}
+                    onContact={() => handleContact(order.sellerId)}
+                    onComplete={() => handleCompleteOrder(order._id)}
+                    completing={completing === order._id}
+                    t={t}
                   />
-                </>
-              )}
-            </div>
-
-            {/* Right — Job posts (coming soon panel) */}
-            <div className="lg:sticky lg:top-24">
-              <SectionHeader
-                eyebrow="Job board"
-                title="My job posts"
-                count={0}
-              />
-
-              {/* Coming soon card */}
-              <div className="relative overflow-hidden border border-dashed border-[#e5e5e5] rounded-2xl p-8 flex flex-col items-center text-center gap-4">
-                {/* Subtle orange glow */}
-                <div className="absolute inset-0 bg-gradient-to-b from-orange-500/[0.03] to-transparent pointer-events-none" />
-
-                <div className="w-12 h-12 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center">
-                  <BsPeopleFill className="text-orange-500 text-[20px]" />
-                </div>
-
-                <div>
-                  <p className="text-[14px] font-bold text-[#111] mb-1">
-                    Job posts coming soon
-                  </p>
-                  <p className="text-[12.5px] text-[#aaa] leading-relaxed max-w-[260px]">
-                    Post a job, set your budget, and let freelancers pitch directly — with their CV or portfolio attached.
-                  </p>
-                </div>
-
-                <div className="w-full space-y-2 mt-2">
-                  {[
-                    "Post a job or gig request",
-                    "Freelancers apply with pitches",
-                    "Review CVs & portfolios",
-                    "Accept the best fit",
-                  ].map((step, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#fafafa] border border-[#f0f0f0]"
-                    >
-                      <span className="w-5 h-5 rounded-lg bg-orange-500/10 border border-orange-500/15 flex items-center justify-center text-[9px] font-bold text-orange-500 flex-shrink-0">
-                        {i + 1}
-                      </span>
-                      <span className="text-[12px] text-[#888] text-left">{step}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-1 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-                  <span className="text-[11px] text-orange-500 font-semibold tracking-wide">
-                    In development
-                  </span>
-                </div>
-              </div>
-
-              {/* Applicants preview placeholder */}
-              <div className="mt-4 border border-[#f0f0f0] rounded-2xl p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-[12px] font-bold text-[#111]">Recent applicants</p>
-                  <span className="text-[10px] text-[#ccc] bg-[#f5f5f5] px-2 py-1 rounded-md font-semibold">
-                    Preview
-                  </span>
-                </div>
-                {[
-                  { initials: "AO", name: "Adebayo Oluwaseun", role: "UI/UX Designer" },
-                  { initials: "CF", name: "Chisom Felix", role: "Full-stack Developer" },
-                  { initials: "EM", name: "Emmanuel Musa", role: "Content Writer" },
-                ].map((applicant, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-3 py-2.5 border-b border-[#f5f5f5] last:border-0 opacity-40"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-[10px] font-bold text-orange-500 flex-shrink-0">
-                      {applicant.initials}
-                    </div>
-                    <div>
-                      <p className="text-[12px] font-semibold text-[#333]">{applicant.name}</p>
-                      <p className="text-[11px] text-[#bbb]">{applicant.role}</p>
-                    </div>
-                    <div className="ml-auto w-14 h-2 bg-[#f0f0f0] rounded-full" />
-                  </div>
                 ))}
-                <p className="text-[11px] text-center text-[#ccc] mt-3">
-                  Applicant pitches will appear here per job post
-                </p>
               </div>
-            </div>
-          </div>
+              <SummaryFooter
+                count={purchases.length}
+                total={purchases.reduce((s, o) => s + getDisplayPrice(o), 0)}
+                currencySymbol={currencySymbol}
+                formatPrice={formatPrice}
+              />
+            </>
+          )}
         </div>
       </div>
     );
@@ -356,29 +301,28 @@ const Orders: React.FC = () => {
   return null;
 };
 
-// ── Shared sub-components ──
+/* ── Shared sub-components ── */
 
-const SectionHeader = ({
+const PageHeader = ({
   eyebrow,
   title,
-  count,
+  sub,
 }: {
   eyebrow: string;
   title: string;
-  count: number;
+  sub: string;
 }) => (
-  <div className="flex items-center justify-between mb-5">
-    <div>
-      <p className="text-[10px] font-bold tracking-[0.16em] text-orange-500 uppercase mb-1">
+  <div className="mb-10">
+    <div className="flex items-center gap-3 mb-3">
+      <div className="h-px w-6 bg-orange-500" />
+      <span className="text-[11px] font-bold tracking-[0.18em] text-orange-500 uppercase">
         {eyebrow}
-      </p>
-      <h2 className="text-[17px] font-extrabold text-[#111]">{title}</h2>
-    </div>
-    {count > 0 && (
-      <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-orange-500/10 text-orange-500">
-        {count}
       </span>
-    )}
+    </div>
+    <h1 className="text-[28px] md:text-[34px] font-extrabold text-[#111] leading-tight">
+      {title}
+    </h1>
+    <p className="text-[13px] text-[#aaa] mt-1.5">{sub}</p>
   </div>
 );
 
@@ -388,17 +332,18 @@ const OrderCard = ({
   index,
   currencySymbol,
   formatPrice,
+  displayPrice,
   isSeller,
   onContact,
   onComplete,
   completing,
-  t,
 }: {
   order: Order;
   user?: User;
   index: number;
   currencySymbol: string;
   formatPrice: (n: number) => string;
+  displayPrice: number;
   isSeller: boolean;
   onContact?: () => void;
   onComplete?: () => void;
@@ -406,14 +351,14 @@ const OrderCard = ({
   t?: (key: string) => string;
 }) => (
   <motion.div
-    initial={{ opacity: 0, y: 10 }}
+    initial={{ opacity: 0, y: 8 }}
     animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.3, delay: index * 0.05 }}
-    className="group flex items-center gap-4 p-4 bg-white border border-[#f0f0f0] hover:border-orange-200 rounded-2xl transition-all duration-200 hover:-translate-y-[1px]"
+    transition={{ duration: 0.25, delay: index * 0.05 }}
+    className="flex items-center gap-4 p-4 bg-white border border-[#f0f0f0] hover:border-orange-100 rounded-2xl transition-all duration-200"
   >
-    <div className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 border border-[#f0f0f0]">
+    <div className="relative w-11 h-11 rounded-xl overflow-hidden shrink-0 border border-[#f0f0f0] bg-[#fafafa]">
       <Image
-        src={order.img || "https://via.placeholder.com/48"}
+        src={order.img || "https://via.placeholder.com/44"}
         alt={order.title}
         fill
         className="object-cover"
@@ -421,42 +366,43 @@ const OrderCard = ({
     </div>
 
     <div className="flex-1 min-w-0">
-      <p className="text-[13px] font-semibold text-[#111] truncate">{order.title}</p>
+      <p className="text-[13px] font-semibold text-[#111] truncate">
+        {order.title}
+      </p>
       <div className="flex items-center gap-1.5 mt-0.5">
         <span className="text-[11px] text-[#bbb]">
           {isSeller ? "From" : "By"}
         </span>
         <span className="text-[11px] text-[#888] font-medium truncate">
-          {user?.username || "N/A"}
+          {user?.username ?? "—"}
         </span>
       </div>
     </div>
 
-    <div className="hidden sm:flex flex-col items-end flex-shrink-0">
-      <span className="text-[13.5px] font-bold text-[#111]">
-        {currencySymbol}{formatPrice(order.price)}
-      </span>
-    </div>
+    <span className="hidden sm:block text-[13.5px] font-bold text-[#111] shrink-0">
+      {currencySymbol}
+      {formatPrice(displayPrice)}
+    </span>
 
-    <div className="flex-shrink-0">
+    <div className="shrink-0">
       {order.isCompleted ? (
-        <div className="flex items-center gap-1.5 bg-green-50 border border-green-100 text-green-600 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg">
-          <HiOutlineCheckCircle className="text-[13px]" />
-          Completed
-        </div>
+        <span className="flex items-center gap-1.5 bg-green-50 border border-green-100 text-green-600 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg">
+          <HiOutlineCheckCircle className="text-[12px]" />
+          Done
+        </span>
       ) : (
-        <div className="flex items-center gap-1.5 bg-[#fff8f5] border border-orange-100 text-orange-400 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg">
-          <HiOutlineXCircle className="text-[13px]" />
+        <span className="flex items-center gap-1.5 bg-[#fff8f5] border border-orange-100 text-orange-400 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg">
+          <HiOutlineXCircle className="text-[12px]" />
           Pending
-        </div>
+        </span>
       )}
     </div>
 
     {!isSeller && (
-      <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="flex items-center gap-2 shrink-0">
         <button
           onClick={onContact}
-          className="w-8 h-8 rounded-xl border border-[#f0f0f0] hover:border-orange-200 flex items-center justify-center text-[#bbb] hover:text-orange-500 transition-all"
+          className="w-8 h-8 rounded-xl border border-[#f0f0f0] hover:border-orange-200 flex items-center justify-center text-[#ccc] hover:text-orange-500 transition-all"
           title="Message seller"
         >
           <RiMessage3Line className="text-[14px]" />
@@ -465,13 +411,13 @@ const OrderCard = ({
           <button
             onClick={onComplete}
             disabled={completing}
-            className="flex items-center gap-1.5 text-[11px] font-bold text-white bg-[#111] hover:bg-orange-500 px-3.5 py-2 rounded-xl transition-all disabled:opacity-50"
+            className="flex items-center gap-1.5 text-[11px] font-bold text-white bg-[#111] hover:bg-orange-500 px-3 py-2 rounded-xl transition-all disabled:opacity-50"
           >
             {completing ? (
               <ClipLoader size={9} color="#fff" />
             ) : (
               <>
-                <HiOutlineCheckCircle className="text-[13px]" />
+                <HiOutlineCheckCircle className="text-[12px]" />
                 Mark done
               </>
             )}
@@ -500,7 +446,8 @@ const SummaryFooter = ({
     <span className="text-[12px] font-bold text-[#111]">
       Total:{" "}
       <span className="text-orange-500">
-        {currencySymbol}{formatPrice(total)}
+        {currencySymbol}
+        {formatPrice(total)}
       </span>
     </span>
   </div>
@@ -518,7 +465,7 @@ const EmptyState = ({
   <div className="flex flex-col items-center justify-center py-16 border border-[#f0f0f0] rounded-2xl">
     <div className="mb-3">{icon}</div>
     <p className="text-[13.5px] font-semibold text-[#ccc]">{title}</p>
-    <p className="text-[12px] text-[#ddd] mt-1 text-center max-w-[240px]">{sub}</p>
+    <p className="text-[12px] text-[#ddd] mt-1 text-center max-w-55">{sub}</p>
   </div>
 );
 

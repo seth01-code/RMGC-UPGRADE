@@ -3,12 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
-  // ✅ IGNORE TYPESCRIPT ERRORS DURING BUILD
   typescript: {
     ignoreBuildErrors: true,
   },
 
-  // ✅ IGNORE ESLINT ERRORS
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -42,6 +40,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "images.pexels.com" },
       { protocol: "https", hostname: "i.pravatar.cc" },
       { protocol: "https", hostname: "randomuser.me" },
+      { protocol: "https", hostname: "via.placeholder.com" }, // ← add this
     ],
   },
 };

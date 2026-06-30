@@ -1,38 +1,65 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Image from "next/image";
 import newRequest from "../../utils/newRequest";
 import { useTranslation } from "react-i18next";
 import FlutterwaveLogo from "../../../assets/images/flutterwave-logo-removebg-preview.png";
 import PaystackLogo from "../../../assets/images/Paystack-removebg-preview.png";
 import backgroundImage from "../../../assets/bill-6107551_1920.png";
-import { FaLock, FaCheckCircle, FaChevronRight, FaShieldAlt, FaGlobe } from "react-icons/fa";
+import {
+  FaLock,
+  FaCheckCircle,
+  FaChevronRight,
+  FaShieldAlt,
+  FaGlobe,
+} from "react-icons/fa";
+import { toast } from "sonner";
 
 const OR = "#FF6B1A";
 const ORL = "#FF8C47";
 
 const VerveBadge = () => (
-  <svg width="28" height="16" viewBox="0 0 56 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect width="56" height="32" rx="4" fill="#0A2C6E"/>
-    <text x="50%" y="50%" dominantBaseline="middle" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontWeight="800" fontFamily="Arial, sans-serif" letterSpacing="0.5">
+  <svg
+    width="28"
+    height="16"
+    viewBox="0 0 56 32"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <rect width="56" height="32" rx="4" fill="#0A2C6E" />
+    <text
+      x="50%"
+      y="50%"
+      dominantBaseline="middle"
+      textAnchor="middle"
+      fill="#FFFFFF"
+      fontSize="11"
+      fontWeight="800"
+      fontFamily="Arial, sans-serif"
+      letterSpacing="0.5"
+    >
       verve
     </text>
-    <rect x="0" y="24" width="56" height="4" rx="0" fill="#E8192C"/>
+    <rect x="0" y="24" width="56" height="4" rx="0" fill="#E8192C" />
   </svg>
 );
 
 const CARD_ICONS = {
   visa: "https://logolook.net/wp-content/uploads/2023/09/Visa-Logo.png",
-  mastercard: "https://cdn.prod.website-files.com/64199d190fc7afa82666d89c/648b606d4a139591f6b3440c_mastercard-1.png",
+  mastercard:
+    "https://cdn.prod.website-files.com/64199d190fc7afa82666d89c/648b606d4a139591f6b3440c_mastercard-1.png",
   amex: "https://webshoptiger.com/wp-content/uploads/2023/09/American-Express-Color-1024x576.png",
 };
 
 const Pay: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [processing, setProcessing] = useState<boolean>(false);
-  const [activeMethod, setActiveMethod] = useState<"paystack" | "flutterwave" | null>(null);
+  const [activeMethod, setActiveMethod] = useState<
+    "paystack" | "flutterwave" | null
+  >(null);
   const [success, setSuccess] = useState(false);
 
   const params = useParams();
@@ -41,7 +68,10 @@ const Pay: React.FC = () => {
 
   const handlePayment = async (paymentMethod: "paystack" | "flutterwave") => {
     try {
-      if (!gigId) { setErrorMessage(t("gigIdMissing")); return; }
+      if (!gigId) {
+        toast.error("Gig ID is missing");
+        return;
+      }
       setActiveMethod(paymentMethod);
       setProcessing(true);
       setErrorMessage("");
@@ -50,15 +80,46 @@ const Pay: React.FC = () => {
       if (paymentMethod === "paystack") {
         res = await newRequest.post(`/orders/create-payment-intent/${gigId}`);
       } else {
-        res = await newRequest.post(`/orders/create-flutterwave-intent/${gigId}`);
+        res = await newRequest.post(
+          `/orders/create-flutterwave-intent/${gigId}`,
+        );
       }
 
       setSuccess(true);
-      setTimeout(() => { window.location.href = res.data.paymentLink; }, 1200);
+      setTimeout(() => {
+        window.location.href = res.data.paymentLink;
+      }, 1200);
     } catch (err: any) {
       setProcessing(false);
       setActiveMethod(null);
-      setErrorMessage(err.response?.data?.message || err.message || t("unknownError"));
+
+      const status = err.response?.status;
+
+      if (paymentMethod === "paystack" && status === 400) {
+        toast.error("Payment unavailable in your region", {
+          description:
+            "Paystack only supports Nigeria and the USA. Please use Flutterwave for international payments.",
+          duration: 6000,
+        });
+        setErrorMessage(
+          "Paystack is not available in your country. Please use Flutterwave.",
+        );
+      } else if (paymentMethod === "flutterwave" && status === 400) {
+        toast.error("Flutterwave unavailable for your country", {
+          description:
+            "Nigerian users must complete payment via Paystack. Please select Paystack above.",
+          duration: 6000,
+        });
+        setErrorMessage("Please use Paystack to complete your payment.");
+      } else {
+        const message =
+          err.response?.data?.message || err.message || t("unknownError");
+        toast.error("Payment failed", {
+          description: message,
+          duration: 5000,
+        });
+        setErrorMessage(message);
+      }
     }
   };
 
@@ -89,7 +150,8 @@ const Pay: React.FC = () => {
           style={{
             position: "absolute",
             inset: 0,
-            background: "linear-gradient(135deg, #0A0A0A 0%, #0F0A06 50%, #0A0A0A 100%)",
+            background:
+              "linear-gradient(135deg, #0A0A0A 0%, #0F0A06 50%, #0A0A0A 100%)",
           }}
         />
         {/* Ambient orange glow */}
@@ -153,7 +215,15 @@ const Pay: React.FC = () => {
             }}
           >
             <FaLock size={10} color={OR} />
-            <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", color: OR, textTransform: "uppercase" }}>
+            <span
+              style={{
+                fontSize: "11px",
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                color: OR,
+                textTransform: "uppercase",
+              }}
+            >
               Secure Checkout
             </span>
           </div>
@@ -170,8 +240,16 @@ const Pay: React.FC = () => {
           >
             Complete Payment
           </h2>
-          <p style={{ margin: 0, fontSize: "14px", color: "#6B7280", lineHeight: 1.5 }}>
-            Choose your preferred payment provider below. All transactions are encrypted end-to-end.
+          <p
+            style={{
+              margin: 0,
+              fontSize: "14px",
+              color: "#6B7280",
+              lineHeight: 1.5,
+            }}
+          >
+            Choose your preferred payment provider below. All transactions are
+            encrypted end-to-end.
           </p>
 
           {/* Trust indicators */}
@@ -181,17 +259,34 @@ const Pay: React.FC = () => {
               { icon: <FaLock size={11} />, label: "PCI Compliant" },
               { icon: <FaGlobe size={11} />, label: "Global Support" },
             ].map((badge, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+              <div
+                key={i}
+                style={{ display: "flex", alignItems: "center", gap: "5px" }}
+              >
                 <span style={{ color: "#4B5563" }}>{badge.icon}</span>
-                <span style={{ fontSize: "11px", color: "#4B5563", fontWeight: 500 }}>{badge.label}</span>
+                <span
+                  style={{
+                    fontSize: "11px",
+                    color: "#4B5563",
+                    fontWeight: 500,
+                  }}
+                >
+                  {badge.label}
+                </span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Payment options */}
-        <div style={{ padding: "28px 36px 36px", display: "flex", flexDirection: "column", gap: "16px" }}>
-
+        <div
+          style={{
+            padding: "28px 36px 36px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+          }}
+        >
           {/* Paystack */}
           <PaymentOption
             title="Pay with Paystack"
@@ -209,7 +304,16 @@ const Pay: React.FC = () => {
           {/* Divider */}
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <div style={{ flex: 1, height: "1px", background: "#1A1A1A" }} />
-            <span style={{ fontSize: "11px", color: "#374151", fontWeight: 600, letterSpacing: "0.06em" }}>OR</span>
+            <span
+              style={{
+                fontSize: "11px",
+                color: "#374151",
+                fontWeight: 600,
+                letterSpacing: "0.06em",
+              }}
+            >
+              OR
+            </span>
             <div style={{ flex: 1, height: "1px", background: "#1A1A1A" }} />
           </div>
 
@@ -242,7 +346,9 @@ const Pay: React.FC = () => {
               }}
             >
               <FaCheckCircle size={16} color="#22C55E" />
-              <span style={{ fontSize: "14px", color: "#22C55E", fontWeight: 600 }}>
+              <span
+                style={{ fontSize: "14px", color: "#22C55E", fontWeight: 600 }}
+              >
                 Redirecting to payment gateway…
               </span>
             </div>
@@ -259,18 +365,44 @@ const Pay: React.FC = () => {
                 animation: "fadeIn 0.3s ease",
               }}
             >
-              <p style={{ margin: 0, fontSize: "13px", color: "#EF4444", lineHeight: 1.5 }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "13px",
+                  color: "#EF4444",
+                  lineHeight: 1.5,
+                }}
+              >
                 ⚠ {errorMessage}
               </p>
             </div>
           )}
 
           {/* Footer note */}
-          <p style={{ margin: "4px 0 0", textAlign: "center", fontSize: "12px", color: "#374151", lineHeight: 1.6 }}>
+          <p
+            style={{
+              margin: "4px 0 0",
+              textAlign: "center",
+              fontSize: "12px",
+              color: "#374151",
+              lineHeight: 1.6,
+            }}
+          >
             By proceeding, you agree to our{" "}
-            <a href="/terms-privacy" style={{ color: "#FF6B1A", textDecoration: "none" }}>Terms of Service</a>
-            {" "}and{" "}
-            <a href="/terms-privacy" style={{ color: "#FF6B1A", textDecoration: "none" }}>Privacy Policy</a>.
+            <a
+              href="/terms-privacy"
+              style={{ color: "#FF6B1A", textDecoration: "none" }}
+            >
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a
+              href="/terms-privacy"
+              style={{ color: "#FF6B1A", textDecoration: "none" }}
+            >
+              Privacy Policy
+            </a>
+            .
           </p>
         </div>
       </div>
@@ -324,7 +456,11 @@ const PaymentOption: React.FC<PaymentOptionProps> = ({
 }) => {
   const [hovered, setHovered] = useState(false);
 
-  const borderColor = isActive ? "#FF6B1A60" : hovered ? "#FF6B1A30" : "#1F1F1F";
+  const borderColor = isActive
+    ? "#FF6B1A60"
+    : hovered
+      ? "#FF6B1A30"
+      : "#1F1F1F";
   const bg = isActive ? "#FF6B1A08" : hovered ? "#FF6B1A05" : "#0F0F0F";
 
   return (
@@ -353,7 +489,8 @@ const PaymentOption: React.FC<PaymentOptionProps> = ({
           style={{
             position: "absolute",
             inset: 0,
-            background: "radial-gradient(ellipse at left center, #FF6B1A0A, transparent 70%)",
+            background:
+              "radial-gradient(ellipse at left center, #FF6B1A0A, transparent 70%)",
             pointerEvents: "none",
           }}
         />
@@ -374,18 +511,41 @@ const PaymentOption: React.FC<PaymentOptionProps> = ({
           boxSizing: "border-box",
         }}
       >
-        <Image src={logo} alt={title} width={40} height={32} style={{ objectFit: "contain", width: "100%", height: "100%" }} />
+        <Image
+          src={logo}
+          alt={title}
+          width={40}
+          height={32}
+          style={{ objectFit: "contain", width: "100%", height: "100%" }}
+        />
       </div>
 
       {/* Text */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ margin: "0 0 3px", fontSize: "15px", fontWeight: 700, color: isActive ? "#FF8C47" : "#E5E7EB", transition: "color 0.2s" }}>
+        <p
+          style={{
+            margin: "0 0 3px",
+            fontSize: "15px",
+            fontWeight: 700,
+            color: isActive ? "#FF8C47" : "#E5E7EB",
+            transition: "color 0.2s",
+          }}
+        >
           {title}
         </p>
-        <p style={{ margin: 0, fontSize: "12px", color: "#4B5563" }}>{subtitle}</p>
+        <p style={{ margin: 0, fontSize: "12px", color: "#4B5563" }}>
+          {subtitle}
+        </p>
 
         {/* Card icons */}
-        <div style={{ display: "flex", gap: "6px", marginTop: "8px", alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "6px",
+            marginTop: "8px",
+            alignItems: "center",
+          }}
+        >
           {icons.map((src, i) => (
             <div
               key={i}
@@ -402,20 +562,28 @@ const PaymentOption: React.FC<PaymentOptionProps> = ({
                 boxSizing: "border-box",
               }}
             >
-              <Image src={src} alt={`card-${i}`} width={28} height={16} style={{ objectFit: "contain", width: "100%", height: "100%" }} />
+              <Image
+                src={src}
+                alt={`card-${i}`}
+                width={28}
+                height={16}
+                style={{ objectFit: "contain", width: "100%", height: "100%" }}
+              />
             </div>
           ))}
           {extraBadge && (
-            <div style={{
-              height: "20px",
-              borderRadius: "4px",
-              overflow: "hidden",
-              display: "flex",
-              alignItems: "center",
-              background: "#1A1A1A",
-              padding: "2px 4px",
-              boxSizing: "border-box",
-            }}>
+            <div
+              style={{
+                height: "20px",
+                borderRadius: "4px",
+                overflow: "hidden",
+                display: "flex",
+                alignItems: "center",
+                background: "#1A1A1A",
+                padding: "2px 4px",
+                boxSizing: "border-box",
+              }}
+            >
               {extraBadge}
             </div>
           )}
@@ -423,7 +591,15 @@ const PaymentOption: React.FC<PaymentOptionProps> = ({
       </div>
 
       {/* Right side */}
-      <div style={{ flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: "32px" }}>
+      <div
+        style={{
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: "32px",
+        }}
+      >
         {isProcessing ? (
           <div
             style={{
@@ -438,7 +614,11 @@ const PaymentOption: React.FC<PaymentOptionProps> = ({
         ) : isActive ? (
           <FaCheckCircle size={18} color="#FF6B1A" />
         ) : (
-          <FaChevronRight size={13} color={hovered ? "#FF6B1A" : "#2A2A2A"} style={{ transition: "color 0.2s" }} />
+          <FaChevronRight
+            size={13}
+            color={hovered ? "#FF6B1A" : "#2A2A2A"}
+            style={{ transition: "color 0.2s" }}
+          />
         )}
       </div>
     </div>

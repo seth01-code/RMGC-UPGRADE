@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import newRequest from "../../utils/newRequest";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { CreditCard, Lock, ArrowRight } from "lucide-react";
 import Image from "next/image";
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -11,7 +12,6 @@ import { useExchangeRate } from "../hooks/useExchangeRate";
 import Image from "next/image";
 import Footer from "../components/footer";
 import Skeleton from "react-loading-skeleton";
-// @ts-ignore: side-effect import for Skeleton styles
 import "react-loading-skeleton/dist/skeleton.css";
 import {
   ExclamationCircleIcon,
@@ -23,50 +23,91 @@ import {
   CheckBadgeIcon,
   ClockIcon,
 } from "@heroicons/react/24/outline";
+import MeetingRequestsPanel from "../components/meetings/MeetingRequestsPanel";
 
 type RevenueEntry = { title: string; totalRevenue: number };
 type MonthlyEntry = { month: string; totalRevenue: number };
+
+// ─── Shared price formatter ───────────────────────────────────────────────────
+const formatPrice = (symbol: string, amount: number): string => {
+  const formatted = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+  return `${symbol}${formatted}`;
+};
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 const StatCard = ({
   label,
   value,
   sub,
+  icon,
   accent = false,
 }: {
   label: string;
   value: string | number;
   sub?: string;
+  icon?: React.ReactNode;
   accent?: boolean;
-}) => (
-  <div
-    className={`flex flex-col gap-1 rounded-2xl px-5 py-4 border transition-all duration-200 ${
-      accent
-        ? "bg-[#f97316] border-[#f97316] text-white"
-        : "bg-white border-neutral-200 text-neutral-900"
-    }`}
-  >
-    <span
-      className={`text-[10px] font-bold uppercase tracking-widest ${
-        accent ? "text-orange-100" : "text-neutral-400"
+}) => {
+  const valueStr = String(value);
+
+  const valueSizeClass =
+    valueStr.length > 16
+      ? "text-sm sm:text-base lg:text-lg"
+      : valueStr.length > 12
+        ? "text-base sm:text-lg lg:text-xl"
+        : valueStr.length > 8
+          ? "text-lg sm:text-xl lg:text-2xl"
+          : "text-xl sm:text-2xl";
+
+  return (
+    <div
+      className={`flex flex-col gap-1 rounded-2xl px-3.5 sm:px-5 py-3.5 sm:py-4 border transition-all duration-200 min-w-0 ${
+        accent
+          ? "bg-[#f97316] border-[#f97316] text-white"
+          : "bg-white border-neutral-200 text-neutral-900"
       }`}
     >
-      {label}
-    </span>
-    <span className="text-2xl font-black leading-none mt-1 tracking-tight">
-      {value}
-    </span>
-    {sub && (
+      <div className="flex items-center justify-between gap-2 min-w-0">
+        <span
+          className={`text-[10px] font-bold uppercase tracking-widest truncate ${
+            accent ? "text-orange-100" : "text-neutral-400"
+          }`}
+        >
+          {label}
+        </span>
+        {icon && (
+          <span
+            className={`text-[15px] shrink-0 ${
+              accent ? "text-orange-100" : "text-neutral-300"
+            }`}
+          >
+            {icon}
+          </span>
+        )}
+      </div>
+
       <span
-        className={`text-[11px] mt-0.5 ${
-          accent ? "text-orange-100" : "text-neutral-400"
-        }`}
+        title={valueStr}
+        className={`block w-full font-black leading-tight mt-1 tracking-tight tabular-nums wrap-break-words ${valueSizeClass}`}
       >
-        {sub}
+        {value}
       </span>
-    )}
-  </div>
-);
+
+      {sub && (
+        <span
+          className={`text-[11px] mt-0.5 truncate ${
+            accent ? "text-orange-100" : "text-neutral-400"
+          }`}
+        >
+          {sub}
+        </span>
+      )}
+    </div>
+  );
+};
 
 // ─── Section Header ───────────────────────────────────────────────────────────
 const SectionHeader = ({
@@ -173,6 +214,13 @@ const SellerDashboard = () => {
     fetchRevenueData();
   }, []);
 
+  // Job-post orders (workId) store price in USD → convert to local currency.
+ const getDisplayPrice = (order: any) => convertPrice(order.price);
+
+  // Blue = came from a client job post; purple = freelancer's own gig upload
+  const getOrderOrigin = (order: any) =>
+    order?.workId ? "Client job post" : "Freelancer gig upload";
+
   // ─── Chart base ───────────────────────────────────────────────────────────
   const chartBase = {
     backgroundColor: "transparent",
@@ -200,7 +248,7 @@ const SellerDashboard = () => {
       trigger: "axis",
       axisPointer: { type: "shadow" },
       formatter: (params: any) =>
-        `<strong>${params[0].name}</strong><br/>${currencySymbol}${params[0].value.toLocaleString()}`,
+        `<strong>${params[0].name}</strong><br/>${formatPrice(currencySymbol, params[0].value)}`,
     },
     xAxis: {
       type: "category",
@@ -211,7 +259,11 @@ const SellerDashboard = () => {
     },
     yAxis: {
       type: "value",
-      axisLabel: { color: "#a3a3a3", fontSize: 11 },
+      axisLabel: {
+        color: "#a3a3a3",
+        fontSize: 11,
+        formatter: (val: number) => formatPrice(currencySymbol, val),
+      },
       splitLine: { lineStyle: { color: "#f5f5f5", type: "dashed" } },
     },
     series: [
@@ -237,7 +289,7 @@ const SellerDashboard = () => {
       ...chartBase.tooltip,
       trigger: "axis",
       formatter: (params: any) =>
-        `<strong>${params[0].axisValue}</strong><br/>${currencySymbol}${params[0].value.toLocaleString()}`,
+        `<strong>${params[0].axisValue}</strong><br/>${formatPrice(currencySymbol, params[0].value)}`,
     },
     xAxis: {
       type: "category",
@@ -249,7 +301,11 @@ const SellerDashboard = () => {
     },
     yAxis: {
       type: "value",
-      axisLabel: { color: "#a3a3a3", fontSize: 11 },
+      axisLabel: {
+        color: "#a3a3a3",
+        fontSize: 11,
+        formatter: (val: number) => formatPrice(currencySymbol, val),
+      },
       splitLine: { lineStyle: { color: "#f5f5f5", type: "dashed" } },
     },
     series: [
@@ -277,7 +333,7 @@ const SellerDashboard = () => {
       ...chartBase.tooltip,
       trigger: "item",
       formatter: (params: any) =>
-        `${params.name}<br/>${currencySymbol}${params.value.toLocaleString()} <span style="color:#a3a3a3">(${params.percent}%)</span>`,
+        `${params.name}<br/>${formatPrice(currencySymbol, params.value)} <span style="color:#a3a3a3">(${params.percent}%)</span>`,
     },
     legend: { show: false },
     series: [
@@ -355,7 +411,7 @@ const SellerDashboard = () => {
 
   return (
     <div className="min-h-screen bg-[#fafafa]">
-      <div className="px-5 md:px-8 py-7 space-y-5 max-w-[1200px]">
+      <div className="px-5 md:px-8 py-7 space-y-5 max-w-300">
         {/* ── Page title ── */}
         <motion.div
           initial={{ opacity: 0, y: -8 }}
@@ -389,9 +445,7 @@ const SellerDashboard = () => {
         >
           <StatCard
             label="Total revenue"
-            value={`${currencySymbol}${new Intl.NumberFormat().format(
-              totalRevenueAllGigs,
-            )}`}
+            value={formatPrice(currencySymbol, totalRevenueAllGigs)}
             sub={countryCurrency}
             accent
           />
@@ -413,85 +467,90 @@ const SellerDashboard = () => {
         </motion.div>
 
         {/* ── Profile ── */}
-       <Panel delay={0.08}>
-  <SectionHeader
-    title="Profile"
-    action={
-      <button
-        onClick={() => router.push("/seller/profile-edit")}
-        className="sm:hidden text-[11px] font-semibold text-[#f97316] flex items-center gap-1"
-      >
-        <PencilSquareIcon className="w-3 h-3" />
-        Edit
-      </button>
-    }
-  />
+        <Panel delay={0.08}>
+          <SectionHeader
+            title="Profile"
+            action={
+              <button
+                onClick={() => router.push("/seller/profile-edit")}
+                className="sm:hidden text-[11px] font-semibold text-[#f97316] flex items-center gap-1"
+              >
+                <PencilSquareIcon className="w-3 h-3" />
+                Edit
+              </button>
+            }
+          />
 
-  {/* Avatar + name row */}
-  <div className="flex items-center gap-4 mb-4">
-    <div className="relative shrink-0">
-      <div className="w-14 h-14 rounded-xl overflow-hidden ring-1 ring-neutral-100">
-        <Image
-          src={
-            user?.img ||
-            "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
-          }
-          alt={user?.username || "Profile"}
-          width={56}
-          height={56}
-          className="object-cover w-full h-full"
-        />
-      </div>
-      <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-400 border-2 border-white rounded-full" />
-    </div>
+          {/* Avatar + name row */}
+          <div className="flex items-center gap-4 mb-4">
+            <div className="relative shrink-0">
+              <div className="w-14 h-14 rounded-xl overflow-hidden ring-1 ring-neutral-100">
+                <Image
+                  src={
+                    user?.img ||
+                    "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
+                  }
+                  alt={user?.username || "Profile"}
+                  width={56}
+                  height={56}
+                  className="object-cover w-full h-full"
+                />
+              </div>
+              <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-400 border-2 border-white rounded-full" />
+            </div>
 
-    <div className="min-w-0">
-      <h3 className="text-[15px] font-bold text-neutral-900 leading-tight truncate">
-        {user?.username}
-      </h3>
-      <div className="flex flex-wrap gap-1.5 mt-1.5">
-        {user?.country && (
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-md">
-            <MapPinIcon className="w-3 h-3 shrink-0" />
-            {user.country}
-          </span>
-        )}
-        {(user?.yearsOfExperience ?? 0) > 0 && (
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-md">
-            <BriefcaseIcon className="w-3 h-3 shrink-0" />
-            {user.yearsOfExperience}yr exp.
-          </span>
-        )}
-      </div>
-    </div>
-  </div>
+            <div className="min-w-0">
+              <h3 className="text-[15px] font-bold text-neutral-900 leading-tight truncate">
+                {user?.username}
+              </h3>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {user?.country && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-md">
+                    <MapPinIcon className="w-3 h-3 shrink-0" />
+                    {user.country}
+                  </span>
+                )}
+                {(user?.yearsOfExperience ?? 0) > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-md">
+                    <BriefcaseIcon className="w-3 h-3 shrink-0" />
+                    {user.yearsOfExperience}yr exp.
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
 
-  {/* Bio — full width, no clamp */}
-  {user?.desc ? (
-    <p className="text-[12.5px] text-neutral-500 leading-relaxed mb-4 whitespace-pre-line break-words">
-      {user.desc}
-    </p>
-  ) : (
-    <p className="text-[12px] text-neutral-300 italic mb-4">No bio added yet.</p>
-  )}
+          {/* Bio */}
+          {user?.desc ? (
+            <p className="text-[12.5px] text-neutral-500 leading-relaxed mb-4 whitespace-pre-line wrap-break-word">
+              {user.desc}
+            </p>
+          ) : (
+            <p className="text-[12px] text-neutral-300 italic mb-4">
+              No bio added yet.
+            </p>
+          )}
 
-  {/* Services — wrapping pills */}
-  {user?.services && user.services.length > 0 && (
-    <div className="flex flex-wrap gap-1.5">
-      {(Array.isArray(user.services) ? user.services : [user.services]).map(
-        (s: string, i: number) => (
-          <span
-            key={i}
-            className="inline-flex items-center gap-1 text-[11px] font-medium bg-orange-50 text-[#f97316] px-2.5 py-1 rounded-lg"
-          >
-            <SparklesIcon className="w-3 h-3 shrink-0" />
-            {s}
-          </span>
-        )
-      )}
-    </div>
-  )}
-</Panel>
+          {/* Services */}
+          {user?.services && user.services.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {(Array.isArray(user.services)
+                ? user.services
+                : [user.services]
+              ).map((s: string, i: number) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1 text-[11px] font-medium bg-orange-50 text-[#f97316] px-2.5 py-1 rounded-lg"
+                >
+                  <SparklesIcon className="w-3 h-3 shrink-0" />
+                  {s}
+                </span>
+              ))}
+            </div>
+          )}
+        </Panel>
+
+        <MeetingRequestsPanel />
 
         {/* ── Charts ── */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
@@ -531,7 +590,7 @@ const SellerDashboard = () => {
           <SectionHeader title="Revenue distribution" />
           <div className="flex flex-col md:flex-row gap-6 items-center">
             <div className="w-full md:w-2/5 overflow-x-auto">
-              <div className="min-w-[220px]">
+              <div className="min-w-55">
                 <ReactECharts
                   option={donutOption}
                   style={{ height: "240px", width: "100%" }}
@@ -557,8 +616,7 @@ const SellerDashboard = () => {
                       {gig.title}
                     </span>
                     <span className="text-[12px] font-bold text-neutral-900 tabular-nums">
-                      {currencySymbol}
-                      {gig.totalRevenue.toLocaleString()}
+                      {formatPrice(currencySymbol, gig.totalRevenue)}
                     </span>
                     <span className="text-[11px] text-neutral-400 tabular-nums w-8 text-right">
                       {pct}%
@@ -614,10 +672,7 @@ const SellerDashboard = () => {
                     </p>
                     <div className="flex items-center justify-between mt-3">
                       <span className="text-[13px] font-black text-[#f97316]">
-                        {currencySymbol}
-                        {new Intl.NumberFormat().format(
-                          convertPrice(gig.price),
-                        )}
+                        {formatPrice(currencySymbol, convertPrice(gig.price))}
                       </span>
                       <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-neutral-400 group-hover:text-[#f97316] transition-colors">
                         View
@@ -670,6 +725,9 @@ const SellerDashboard = () => {
                       Order ID
                     </th>
                     <th className="text-left text-[10px] font-bold text-neutral-400 uppercase tracking-wider pb-3 pr-4">
+                      Origin
+                    </th>
+                    <th className="text-left text-[10px] font-bold text-neutral-400 uppercase tracking-wider pb-3 pr-4">
                       Amount
                     </th>
                     <th className="text-left text-[10px] font-bold text-neutral-400 uppercase tracking-wider pb-3">
@@ -683,12 +741,22 @@ const SellerDashboard = () => {
                       key={order._id}
                       className="hover:bg-neutral-50 transition-colors"
                     >
-                      <td className="py-3 pr-4 font-mono text-[11px] text-neutral-400 truncate max-w-[140px]">
+                      <td className="py-3 pr-4 font-mono text-[11px] text-neutral-400 truncate max-w-35">
                         {order._id}
                       </td>
+                      <td className="py-3 pr-4">
+                        <span
+                          className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg ${
+                            order?.workId
+                              ? "bg-blue-50 text-blue-600 border border-blue-100"
+                              : "bg-purple-50 text-purple-600 border border-purple-100"
+                          }`}
+                        >
+                          {getOrderOrigin(order)}
+                        </span>
+                      </td>
                       <td className="py-3 pr-4 font-bold text-[13px] text-neutral-900 tabular-nums">
-                        {currencySymbol}
-                        {new Intl.NumberFormat().format(order.price)}
+                        {formatPrice(currencySymbol, getDisplayPrice(order))}
                         <span className="ml-1 text-[11px] font-normal text-neutral-400">
                           {countryCurrency}
                         </span>

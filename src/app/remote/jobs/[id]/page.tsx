@@ -11,7 +11,7 @@ import {
   Building2,
   Award,
 } from "lucide-react";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import newRequest from "../../../utils/newRequest";
 import upload from "../../../utils/upload";
 

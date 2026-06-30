@@ -38,37 +38,43 @@ const WhatsAppAudioPlayer: React.FC<WhatsAppAudioPlayerProps> = ({
     return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
 
-  useEffect(() => {
-    if (fileExtension.toLowerCase() !== "wav" || !waveformRef.current) return;
-    const wave = WaveSurfer.create({
-      container: waveformRef.current,
-      waveColor: isSender ? "rgba(255,255,255,0.35)" : "#3A3A3A",
-      progressColor: isSender ? "#FFFFFF" : "#FF6B1A",
-      cursorColor: "transparent",
-      barWidth: 2,
-      barGap: 1,
-      barRadius: 2,
-      responsive: true,
-      height: 40,
-    });
-    waveSurferRef.current = wave;
-    let isUnmounted = false;
-    const safe = (fn: () => void) => { if (!isUnmounted) fn(); };
-    wave.load(src);
-    wave.on("ready", () => safe(() => setDuration(formatTime(wave.getDuration()))));
-    wave.on("audioprocess", () => safe(() => {
-      setCurrentTime(formatTime(wave.getCurrentTime()));
-      setProgress((wave.getCurrentTime() / wave.getDuration()) * 100);
-    }));
-    wave.on("finish", () => safe(() => { setIsPlaying(false); setProgress(0); }));
-    return () => {
-      isUnmounted = true;
-      if (waveSurferRef.current) {
-        try { waveSurferRef.current.empty(); waveSurferRef.current.destroy(); } catch { }
-        waveSurferRef.current = null;
-      }
-    };
-  }, [fileExtension, src, isSender]);
+useEffect(() => {
+  if (fileExtension.toLowerCase() !== "wav" || !waveformRef.current) return;
+  
+  let isUnmounted = false;
+  const safe = (fn: () => void) => { if (!isUnmounted) fn(); };
+
+  const wave = WaveSurfer.create({
+    container: waveformRef.current,
+    waveColor: isSender ? "rgba(255,255,255,0.35)" : "#3A3A3A",
+    progressColor: isSender ? "#FFFFFF" : "#FF6B1A",
+    cursorColor: "transparent",
+    barWidth: 2,
+    barGap: 1,
+    barRadius: 2,
+    height: 40,
+  });
+
+  waveSurferRef.current = wave;
+
+  // catch the load promise so abort on unmount doesn't become unhandled rejection
+  wave.load(src).catch(() => {});
+
+  wave.on("ready", () => safe(() => setDuration(formatTime(wave.getDuration()))));
+  wave.on("audioprocess", () => safe(() => {
+    setCurrentTime(formatTime(wave.getCurrentTime()));
+    setProgress((wave.getCurrentTime() / wave.getDuration()) * 100);
+  }));
+  wave.on("finish", () => safe(() => { setIsPlaying(false); setProgress(0); }));
+
+  return () => {
+    isUnmounted = true;
+    if (waveSurferRef.current) {
+      try { waveSurferRef.current.destroy(); } catch {}
+      waveSurferRef.current = null;
+    }
+  };
+}, [fileExtension, src, isSender]);
 
   useEffect(() => {
     if (fileExtension.toLowerCase() === "wav") return;

@@ -3,7 +3,7 @@
 import React, { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import newRequest from "../utils/newRequest";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { HiOutlineMail, HiArrowRight, HiArrowLeft } from "react-icons/hi";
 import { HiOutlineShieldCheck } from "react-icons/hi";

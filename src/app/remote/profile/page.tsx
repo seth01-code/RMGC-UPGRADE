@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { CheckCircle, } from "lucide-react";
 import newRequest from "../../utils/newRequest";
 

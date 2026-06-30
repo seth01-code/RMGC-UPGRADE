@@ -20,9 +20,10 @@ import {
   LuBriefcase,
   LuLayers,
   LuAward,
+  LuImage,
 } from "react-icons/lu";
 import Footer from "@/app/components/footer";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 
 // ─────────────────────────────────────────────
 // TYPES
@@ -41,7 +42,9 @@ interface Portfolio {
     description: string;
     technologies: string[];
     outcomes: string;
+    images?: string[];
   }[];
+  gallery?: string[];
   confidence_score?: number;
   analyzedAt?: string;
 }
@@ -132,6 +135,42 @@ const ConfidenceBar = ({ score }: { score: number }) => {
 };
 
 // ─────────────────────────────────────────────
+// IMAGE THUMBNAIL ROW
+// Plain <img> rather than next/image here — these come from wherever the
+// portfolio analyzer's storage uploads to (Cloudinary by default), and
+// using next/image would require that host to be added to next.config.js
+// first. Worth switching to next/image once that's confirmed.
+// ─────────────────────────────────────────────
+
+const ThumbnailRow = ({
+  images,
+  altPrefix,
+  onSelect,
+}: {
+  images: string[];
+  altPrefix: string;
+  onSelect: (src: string) => void;
+}) => (
+  <div className="flex flex-wrap gap-1.5">
+    {images.map((src, i) => (
+      <button
+        key={i}
+        type="button"
+        onClick={() => onSelect(src)}
+        className="w-14 h-14 rounded-md overflow-hidden border border-neutral-200 hover:border-orange-300 transition-colors flex-shrink-0"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt={`${altPrefix} ${i + 1}`}
+          className="w-full h-full object-cover"
+        />
+      </button>
+    ))}
+  </div>
+);
+
+// ─────────────────────────────────────────────
 // PORTFOLIO PANEL
 // ─────────────────────────────────────────────
 
@@ -154,6 +193,7 @@ const PortfolioPanel = ({
   );
   const [analyzing, setAnalyzing] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
   const p = seller.portfolio;
 
@@ -466,7 +506,7 @@ const PortfolioPanel = ({
                           </p>
                         )}
                         {proj.technologies?.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-1">
+                          <div className="flex flex-wrap gap-1 mb-1.5">
                             {proj.technologies.map((t, ti) => (
                               <span
                                 key={ti}
@@ -478,13 +518,34 @@ const PortfolioPanel = ({
                           </div>
                         )}
                         {proj.outcomes && (
-                          <p className="text-[10px] text-green-600 font-medium">
+                          <p className="text-[10px] text-green-600 font-medium mb-1.5">
                             ↗ {proj.outcomes}
                           </p>
+                        )}
+                        {proj.images && proj.images.length > 0 && (
+                          <ThumbnailRow
+                            images={proj.images}
+                            altPrefix={proj.name}
+                            onSelect={setLightboxSrc}
+                          />
                         )}
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Gallery — images that didn't map to one specific project */}
+              {p.gallery && p.gallery.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1.5 flex items-center gap-1">
+                    <LuImage className="text-[10px]" /> Other images ({p.gallery.length})
+                  </p>
+                  <ThumbnailRow
+                    images={p.gallery}
+                    altPrefix="Portfolio image"
+                    onSelect={setLightboxSrc}
+                  />
                 </div>
               )}
 
@@ -528,6 +589,29 @@ const PortfolioPanel = ({
         <p className="text-[11px] text-red-500 text-center">
           Analysis failed. Add sources above and try again.
         </p>
+      )}
+
+      {/* Lightbox */}
+      {lightboxSrc && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6"
+          onClick={() => setLightboxSrc(null)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lightboxSrc}
+            alt="Portfolio image preview"
+            className="max-w-full max-h-full rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            onClick={() => setLightboxSrc(null)}
+            className="absolute top-5 right-5 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+            aria-label="Close preview"
+          >
+            <LuCircleX className="text-[18px]" />
+          </button>
+        </div>
       )}
     </div>
   );

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import upload from "../../utils/upload";
 import newRequest from "../../utils/newRequest";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 

@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ChatSidebar from "../chatSidebar/ChatSidebar";
 import ChatWindow from "../chatWindow/ChatWindow";
 import { FaCommentDots } from "react-icons/fa";
@@ -12,18 +13,38 @@ interface ChatPageProps {
 const ChatPage: React.FC<ChatPageProps> = ({ userId }) => {
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // ── Track viewport so we know whether sidebar should behave as a
+  // persistent column (desktop) or a slide-in drawer (mobile) ──────────────
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 767px)");
+
+    const applyState = (mobile: boolean) => {
+      setIsMobile(mobile);
+      // On mobile, default to a closed drawer. On desktop, default open.
+      setIsSidebarOpen(!mobile);
+    };
+
+    applyState(mql.matches);
+
+    const handler = (e: MediaQueryListEvent) => applyState(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
 
   const toggleSidebar = () => setIsSidebarOpen((prev) => !prev);
 
   const handleSelectConversation = (conv: any) => {
     setSelectedConversation(conv);
-    // On mobile, close sidebar when a conversation is selected
-    if (window.innerWidth < 768) setIsSidebarOpen(false);
+    // On mobile, close the drawer once a conversation is picked
+    if (isMobile) setIsSidebarOpen(false);
   };
 
   return (
     <div
       style={{
+        position: "relative",
         display: "flex",
         height: "100vh",
         background: "#0F0F0F",
@@ -32,17 +53,50 @@ const ChatPage: React.FC<ChatPageProps> = ({ userId }) => {
         overflow: "hidden",
       }}
     >
-      {/* Sidebar column */}
+      {/* ── Backdrop (mobile only, shown when drawer is open) ── */}
+      {isMobile && isSidebarOpen && (
+        <div
+          onClick={toggleSidebar}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            zIndex: 30,
+          }}
+        />
+      )}
+
+      {/* ── Sidebar column ── */}
       <div
-        style={{
-          width: isSidebarOpen ? "320px" : "0px",
-          minWidth: isSidebarOpen ? "280px" : "0px",
-          maxWidth: "360px",
-          flexShrink: 0,
-          transition: "width 0.3s ease, min-width 0.3s ease",
-          overflow: "hidden",
-          height: "100vh",
-        }}
+        className="chat-sidebar-panel"
+        style={
+          isMobile
+            ? {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                bottom: 0,
+                width: "85vw",
+                maxWidth: "340px",
+                zIndex: 40,
+                transform: isSidebarOpen
+                  ? "translateX(0)"
+                  : "translateX(-100%)",
+                transition: "transform 0.25s ease",
+                boxShadow: isSidebarOpen
+                  ? "4px 0 24px rgba(0,0,0,0.5)"
+                  : "none",
+              }
+            : {
+                position: "relative",
+                width: isSidebarOpen ? "320px" : "0px",
+                minWidth: isSidebarOpen ? "280px" : "0px",
+                maxWidth: "360px",
+                flexShrink: 0,
+                transition: "width 0.25s ease, min-width 0.25s ease",
+                overflow: "hidden",
+              }
+        }
       >
         <ChatSidebar
           userId={userId}
@@ -53,7 +107,7 @@ const ChatPage: React.FC<ChatPageProps> = ({ userId }) => {
         />
       </div>
 
-      {/* Main area */}
+      {/* ── Main area ── */}
       <main
         style={{
           flex: 1,
@@ -63,42 +117,16 @@ const ChatPage: React.FC<ChatPageProps> = ({ userId }) => {
           minWidth: 0,
         }}
       >
-        {/* Mobile top bar */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "12px 16px",
-            background: "#141414",
-            borderBottom: "1px solid #1F1F1F",
-          }}
-          className="mobile-topbar"
-        >
-          <button
-            onClick={toggleSidebar}
-            style={{
-              background: "none",
-              border: "none",
-              color: "#FF6B1A",
-              cursor: "pointer",
-              fontSize: "20px",
-              padding: "4px",
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            {isSidebarOpen ? "✕" : "☰"}
-          </button>
-          <h1 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#FFFFFF" }}>
-            {selectedConversation?.otherParticipant?.username || "Chats"}
-          </h1>
-          <div style={{ width: "28px" }} />
-        </div>
-
         {/* Chat or empty state */}
         {selectedConversation ? (
-          <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+          <div
+            style={{
+              flex: 1,
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
             <ChatWindow
               userId={userId}
               conversation={selectedConversation}
@@ -116,7 +144,8 @@ const ChatPage: React.FC<ChatPageProps> = ({ userId }) => {
               justifyContent: "center",
               gap: "16px",
               color: "#374151",
-              padding: "40px",
+              padding: "40px 24px",
+              textAlign: "center",
             }}
           >
             {/* Decorative ring */}
@@ -144,36 +173,51 @@ const ChatPage: React.FC<ChatPageProps> = ({ userId }) => {
                   justifyContent: "center",
                 }}
               >
-                <FaCommentDots size={22} color="#FF6B1A" style={{ opacity: 0.7 }} />
+                <FaCommentDots
+                  size={22}
+                  color="#FF6B1A"
+                  style={{ opacity: 0.7 }}
+                />
               </div>
             </div>
-            <div style={{ textAlign: "center" }}>
-              <p style={{ margin: "0 0 6px", fontSize: "18px", fontWeight: 700, color: "#4B5563" }}>
+            <div>
+              <p
+                style={{
+                  margin: "0 0 6px",
+                  fontSize: "18px",
+                  fontWeight: 700,
+                  color: "#4B5563",
+                }}
+              >
                 No conversation open
               </p>
               <p style={{ margin: 0, fontSize: "13px", color: "#374151" }}>
-                Pick a chat from the sidebar to get started
+                {isMobile
+                  ? "Tap ☰ to pick a chat from the list"
+                  : "Pick a chat from the sidebar to get started"}
               </p>
+              {isMobile && (
+                <button
+                  onClick={toggleSidebar}
+                  style={{
+                    marginTop: "16px",
+                    background: "#FF6B1A",
+                    color: "#fff",
+                    border: "none",
+                    padding: "10px 20px",
+                    borderRadius: "10px",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    fontWeight: 600,
+                  }}
+                >
+                  Open conversations
+                </button>
+              )}
             </div>
           </div>
         )}
       </main>
-
-      <style>{`
-        .mobile-topbar {
-          display: none;
-        }
-        @media (max-width: 767px) {
-          .mobile-topbar {
-            display: flex !important;
-          }
-        }
-        @media (min-width: 768px) {
-          .mobile-topbar {
-            display: none !important;
-          }
-        }
-      `}</style>
     </div>
   );
 };

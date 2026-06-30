@@ -4,18 +4,13 @@ import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { IoLogOutOutline } from "react-icons/io5";
-import { TbMessages } from "react-icons/tb";
-import { MdOutlineAdd, MdAdminPanelSettings } from "react-icons/md";
-import { HiOutlineShoppingCart } from "react-icons/hi";
-import { FaTasks } from "react-icons/fa";
-import { LuLayoutDashboard } from "react-icons/lu";
-import { HiChevronDown } from "react-icons/hi";
+import { TbMessages, TbLayoutDashboard, TbShoppingCart, TbBriefcase, TbVideo, TbUsers, TbLogout, TbShieldCheck, TbLayoutGrid, TbPlus } from "react-icons/tb";
 import Image from "next/image";
 import CategoriesBar from "./CategoriesBar";
 import Announcements from "./Announcement";
 import { Orbitron } from "next/font/google";
 import { motion, AnimatePresence } from "framer-motion";
+import { HiChevronDown } from "react-icons/hi";
 
 const orbitron = Orbitron({
   subsets: ["latin"],
@@ -66,7 +61,20 @@ const Navbar: React.FC = () => {
     localStorage.removeItem("currentUser");
     setCurrentUser(null);
     setProfileOpen(false);
+    window.location.href = "/login";
   };
+
+  const roleLabel = currentUser?.isAdmin
+    ? "Admin account"
+    : currentUser?.isSeller
+    ? "Freelancer account"
+    : "Client account";
+
+  const iconBtn = `w-9 h-9 rounded-[10px] border flex items-center justify-center text-[17px] transition-all duration-150 ${
+    isDark
+      ? "border-[#1e1e1e] text-[#444] hover:text-orange-500 hover:border-orange-500/40 hover:bg-orange-500/5"
+      : "border-[#e5e5e5] text-[#bbb] hover:text-orange-500 hover:border-orange-500/30 hover:bg-orange-50"
+  }`;
 
   return (
     <>
@@ -78,24 +86,21 @@ const Navbar: React.FC = () => {
             : "bg-white border-b border-[#f0f0f0]"
         }`}
       >
-        <div className="mx-auto flex items-center justify-between px-6 md:px-10 max-w-[1400px] h-16">
+        <div className="mx-auto flex items-center justify-between px-6 md:px-10 max-w-350 h-15">
 
           {/* ── Logo ── */}
-          <motion.div
-            whileHover={{ scale: 1.03 }}
-            transition={{ type: "spring", stiffness: 300 }}
-          >
+          <motion.div whileHover={{ scale: 1.03 }} transition={{ type: "spring", stiffness: 300 }}>
             <Link
               href="/"
-              className={`font-[var(--font-orbitron)] text-[22px] font-bold tracking-wide select-none ${orbitron.variable}`}
+              className={`${orbitron.variable} font-(family-name:--font-orbitron) text-[20px] tracking-widest select-none flex items-end gap-0`}
             >
               <span className="text-orange-500">RM</span>
               <span className={isDark ? "text-white" : "text-[#111]"}>GC</span>
               <motion.span
-                className="text-orange-500 ml-0.5"
+                className="text-orange-500 ml-0.5 text-[22px]"
                 animate={{ y: [0, -2, 0] }}
-                transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                style={{ display: "inline-block" }}
+                transition={{ repeat: Infinity, duration: 1.6, ease: "easeInOut" }}
+                style={{ display: "inline-block", lineHeight: 1 }}
               >
                 .
               </motion.span>
@@ -103,31 +108,17 @@ const Navbar: React.FC = () => {
           </motion.div>
 
           {/* ── Right side ── */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
 
-            {/* Admin icon */}
             {currentUser?.isAdmin && (
-              <Link
-                href="/admin"
-                className={`text-xl transition-colors ${
-                  isDark ? "text-[#444] hover:text-orange-500" : "text-[#bbb] hover:text-orange-500"
-                }`}
-                title="Admin panel"
-              >
-                <MdAdminPanelSettings />
+              <Link href="/admin" className={iconBtn} title="Admin panel">
+                <TbShieldCheck />
               </Link>
             )}
 
-            {/* Seller dashboard icon */}
             {currentUser?.isSeller && (
-              <Link
-                href="/seller"
-                className={`text-xl transition-colors ${
-                  isDark ? "text-[#444] hover:text-orange-500" : "text-[#bbb] hover:text-orange-500"
-                }`}
-                title="Seller dashboard"
-              >
-                <LuLayoutDashboard />
+              <Link href="/seller" className={iconBtn} title="Seller dashboard">
+                <TbLayoutDashboard />
               </Link>
             )}
 
@@ -135,36 +126,36 @@ const Navbar: React.FC = () => {
               <div className="relative" ref={dropdownRef}>
                 {/* Avatar trigger */}
                 <button
-                  onClick={() => setProfileOpen(!profileOpen)}
-                  className="flex items-center gap-2.5 cursor-pointer bg-transparent border-none"
+                  onClick={() => setProfileOpen((v) => !v)}
+                  className={`flex items-center gap-2.5 rounded-[11px] border px-2.5 py-1.5 transition-all duration-150 cursor-pointer ${
+                    isDark
+                      ? "bg-[#0e0e0e] border-[#1e1e1e] hover:border-[#2a2a2a]"
+                      : "bg-[#f9f9f9] border-[#e8e8e8] hover:border-[#d0d0d0]"
+                  }`}
                 >
-                  <div
-                    className={`w-9 h-9 rounded-[10px] overflow-hidden flex-shrink-0 border-2 ${
-                      isDark ? "border-[#1e1e1e]" : "border-[#e5e5e5]"
-                    }`}
-                  >
+                  <div className="w-7.5 h-7.5 rounded-[7px] overflow-hidden shrink-0">
                     <Image
                       src={
                         currentUser.img ||
                         "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
                       }
                       alt="Profile"
-                      width={36}
-                      height={36}
+                      width={30}
+                      height={30}
                       className="w-full h-full object-cover"
                     />
                   </div>
                   <span
-                    className={`text-[13px] font-semibold max-w-[100px] truncate hidden sm:block ${
-                      isDark ? "text-[#ccc]" : "text-[#333]"
+                    className={`text-[13px] font-semibold max-w-22.5 truncate hidden sm:block ${
+                      isDark ? "text-[#ccc]" : "text-[#222]"
                     }`}
                   >
                     {currentUser.username}
                   </span>
                   <HiChevronDown
-                    className={`text-[14px] transition-transform duration-200 ${
+                    className={`text-[13px] transition-transform duration-200 ${
                       profileOpen ? "rotate-180" : ""
-                    } ${isDark ? "text-[#444]" : "text-[#bbb]"}`}
+                    } ${isDark ? "text-[#383838]" : "text-[#bbb]"}`}
                   />
                 </button>
 
@@ -172,56 +163,79 @@ const Navbar: React.FC = () => {
                 <AnimatePresence>
                   {profileOpen && (
                     <motion.div
-                      initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                      initial={{ opacity: 0, y: -6, scale: 0.97 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: -8, scale: 0.97 }}
-                      transition={{ duration: 0.15, ease: "easeOut" }}
-                      className="absolute top-12 right-0 bg-[#0e0e0e] border border-[#1e1e1e] rounded-2xl w-56 z-50 overflow-hidden"
+                      exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                      transition={{ duration: 0.14, ease: "easeOut" }}
+                      className="absolute top-[calc(100%+8px)] right-0 bg-[#0c0c0c] border border-[#1a1a1a] rounded-2xl w-55 z-50 overflow-hidden"
                     >
-                      {/* User info header */}
-                      <div className="px-4 py-3 border-b border-[#161616]">
-                        <p className="text-[13px] font-bold text-[#ccc]">{currentUser.username}</p>
-                        <p className="text-[11px] text-[#444] mt-0.5">
-                          {currentUser.isAdmin ? "Admin account" : currentUser.isSeller ? "Freelancer account" : "Client account"}
-                        </p>
+                      {/* Header */}
+                      <div className="px-4 py-3.5 border-b border-[#141414] flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-[9px] overflow-hidden shrink-0 border border-[#1e1e1e]">
+                          <Image
+                            src={
+                              currentUser.img ||
+                              "https://miamistonesource.com/wp-content/uploads/2018/05/no-avatar-25359d55aa3c93ab3466622fd2ce712d1.jpg"
+                            }
+                            alt="Profile"
+                            width={36}
+                            height={36}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold text-[#ddd] truncate">{currentUser.username}</p>
+                          <p className="text-[11px] text-[#383838] mt-0.5 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 inline-block shrink-0" />
+                            {roleLabel}
+                          </p>
+                        </div>
                       </div>
 
-                      <div className="p-2">
+                      <div className="p-1.5">
                         {/* Seller links */}
                         {currentUser.isSeller && (
                           <>
-                            <DropdownItem href="/mygigs" icon={<MdOutlineAdd />} label={t("navbar.Gigs")} onClick={() => setProfileOpen(false)} />
-                            <DropdownItem href="/add" icon={<MdOutlineAdd />} label={t("navbar.Add New Gig")} onClick={() => setProfileOpen(false)} />
-                            <DropdownItem href="/orders" icon={<HiOutlineShoppingCart />} label={t("navbar.orders")} onClick={() => setProfileOpen(false)} />
+                            <SectionLabel label="Workspace" />
+                            <DropdownItem href="/mygigs" icon={<TbLayoutGrid />} label="My gigs" onClick={() => setProfileOpen(false)} />
+                            <DropdownItem href="/add" icon={<TbPlus />} label="Add new gig" onClick={() => setProfileOpen(false)} />
+                            <DropdownItem href="/orders" icon={<TbShoppingCart />} label={t("navbar.orders")} onClick={() => setProfileOpen(false)} />
                             <DropdownItem href="/chat" icon={<TbMessages />} label={t("navbar.messages")} onClick={() => setProfileOpen(false)} />
+                            <DropdownItem href="/meetings" icon={<TbVideo />} label="Meetings" onClick={() => setProfileOpen(false)} />
+                            <DropdownItem href="/seller/job" icon={<TbBriefcase />} label="Client job requests" onClick={() => setProfileOpen(false)} />
                           </>
                         )}
 
                         {/* Buyer links */}
                         {!currentUser.isSeller && !currentUser.isAdmin && (
                           <>
-                            <DropdownItem href="/orders" icon={<HiOutlineShoppingCart />} label={t("navbar.orders")} onClick={() => setProfileOpen(false)} />
-                            <DropdownItem href="/allgigs" icon={<FaTasks />} label={t("allGigs")} onClick={() => setProfileOpen(false)} />
+                            <SectionLabel label="Workspace" />
+                            <DropdownItem href="/orders" icon={<TbShoppingCart />} label={t("navbar.orders")} onClick={() => setProfileOpen(false)} />
+                            <DropdownItem href="/profile" icon={<TbUsers />} label="Freelancer profiles" onClick={() => setProfileOpen(false)} />
+                            <DropdownItem href="/allgigs" icon={<TbLayoutGrid />} label="Browse gigs" onClick={() => setProfileOpen(false)} />
                             <DropdownItem href="/chat" icon={<TbMessages />} label={t("navbar.messages")} onClick={() => setProfileOpen(false)} />
+                            <DropdownItem href="/meetings" icon={<TbVideo />} label="Meetings" onClick={() => setProfileOpen(false)} />
+                            <DropdownItem href="/jobs" icon={<TbBriefcase />} label="Post jobs & proposals" onClick={() => setProfileOpen(false)} />
                           </>
                         )}
 
                         {/* Admin links */}
                         {currentUser.isAdmin && (
                           <>
-                            <DropdownItem href="/admin" icon={<LuLayoutDashboard />} label="Dashboard" onClick={() => setProfileOpen(false)} />
+                            <SectionLabel label="Admin" />
+                            <DropdownItem href="/admin" icon={<TbLayoutDashboard />} label="Dashboard" onClick={() => setProfileOpen(false)} />
                             <DropdownItem href="/admin/messages" icon={<TbMessages />} label="Messages" onClick={() => setProfileOpen(false)} />
-                            <DropdownItem href="/admin/sellers" icon={<FaTasks />} label="Sellers" onClick={() => setProfileOpen(false)} />
+                            <DropdownItem href="/admin/sellers" icon={<TbUsers />} label="Sellers" onClick={() => setProfileOpen(false)} />
                           </>
                         )}
 
-                        {/* Separator + logout */}
-                        <div className="h-px bg-[#161616] my-1.5" />
+                        {/* Logout */}
+                        <div className="h-px bg-[#141414] mx-1 my-1.5" />
                         <button
                           onClick={handleLogout}
-                          className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-[13px] font-medium text-[#555] hover:bg-[#1a0808] hover:text-red-400 transition-all"
+                          className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-[10px] text-[12.5px] font-medium text-[#4a4a4a] hover:bg-[#1a0808] hover:text-red-400 transition-all"
                         >
-                          <IoLogOutOutline className="text-red-500 text-base" />
+                          <TbLogout className="text-red-500 text-[15px]" />
                           {t("navbar.logout")}
                         </button>
                       </div>
@@ -232,10 +246,10 @@ const Navbar: React.FC = () => {
             ) : (
               <Link href="/login">
                 <button
-                  className={`text-[13px] font-bold px-5 py-2 rounded-lg transition-colors ${
+                  className={`text-[13px] font-semibold px-5 py-2 rounded-[9px] transition-all active:scale-[0.97] ${
                     isDark
-                      ? "bg-orange-500 hover:bg-orange-600 text-white"
-                      : "bg-[#080808] hover:bg-[#222] text-white"
+                      ? "bg-orange-600 hover:bg-orange-500 text-white"
+                      : "bg-[#0a0a0a] hover:bg-[#222] text-white"
                   }`}
                 >
                   {t("navbar.signIn")}
@@ -251,6 +265,12 @@ const Navbar: React.FC = () => {
   );
 };
 
+const SectionLabel = ({ label }: { label: string }) => (
+  <p className="text-[10px] font-semibold text-[#2a2a2a] uppercase tracking-[0.08em] px-3 pt-2 pb-1">
+    {label}
+  </p>
+);
+
 const DropdownItem = ({
   href,
   icon,
@@ -265,9 +285,9 @@ const DropdownItem = ({
   <Link
     href={href}
     onClick={onClick}
-    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium text-[#555] hover:bg-[#161616] hover:text-[#ccc] transition-all"
+    className="flex items-center gap-2.5 px-3 py-2.5 rounded-[10px] text-[12.5px] font-medium text-[#555] hover:bg-[#151515] hover:text-[#ccc] transition-all"
   >
-    <span className="text-orange-500 text-base">{icon}</span>
+    <span className="text-orange-500 text-[15px] shrink-0">{icon}</span>
     {label}
   </Link>
 );

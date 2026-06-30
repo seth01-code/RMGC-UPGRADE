@@ -67,12 +67,13 @@ const countryToCurrencyMap: Record<string, string> = {
   "São Tomé and Príncipe": "STN",
 };
 
-const BASE_CURRENCY = "USD"; // Base currency for conversion
+const BASE_CURRENCY = "USD"; // Base currency for conversion — also the currency we store all money values in
 
 interface ExchangeRateHook {
   exchangeRate: number;
   currencySymbol: string;
   convertPrice: (price: number, originalCurrency?: string) => number;
+  convertToUSD: (localAmount: number) => number;
   countryCurrency: string;
 }
 
@@ -108,12 +109,20 @@ export const useExchangeRate = (country?: string): ExchangeRateHook => {
     fetchExchangeRate();
   }, [countryCurrency]);
 
-  const convertPrice = (price: number, originalCurrency = "USD") => {
-    if (originalCurrency === countryCurrency) return price;
-    return price * exchangeRate;
+  // USD -> local currency (for displaying USD-stored amounts to the user)
+ const convertPrice = (price: number, originalCurrency = "USD") => {
+  if (originalCurrency === countryCurrency) return price;
+  return Math.round(price * exchangeRate * 100) / 100;
+};
+
+  // local currency -> USD (for converting what the user typed before it's
+  // sent to the backend — everything we store should be USD-denominated)
+  const convertToUSD = (localAmount: number): number => {
+    if (!exchangeRate || exchangeRate === 0) return localAmount;
+    return Math.round((localAmount / exchangeRate) * 100) / 100;
   };
 
-  return { exchangeRate, currencySymbol, convertPrice, countryCurrency };
+  return { exchangeRate, currencySymbol, convertPrice, convertToUSD, countryCurrency };
 };
 
 // Helper function to get currency symbol

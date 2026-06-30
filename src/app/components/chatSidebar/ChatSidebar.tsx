@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
@@ -44,7 +46,6 @@ interface ChatSidebarProps {
 const ChatSidebar: React.FC<ChatSidebarProps> = ({
   userId,
   selectConversation,
-  isSidebarOpen,
   toggleSidebar,
   selectedId,
 }) => {
@@ -71,7 +72,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   };
 
   useEffect(() => {
-    socket.current = io("https://api.renewedmindsglobalconsult.com/api");
+    socket.current = io("http://localhost:4000/api");
     fetchConversations();
     socket.current.on("messageSeen", (seenMessage: any) => {
       setConversations((prev) =>
@@ -101,7 +102,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   };
 
   const filtered = conversations.filter((c) =>
-    c.otherParticipant?.username?.toLowerCase().includes(search.toLowerCase())
+    (c.otherParticipant?.username ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -137,6 +138,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                flexShrink: 0,
               }}
             >
               <FaCommentDots color="#fff" size={14} />
@@ -145,9 +147,10 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
               Messages
             </h2>
           </div>
-          <div style={{ display: "flex", gap: "8px" }}>
+          <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
             <button
               onClick={() => router.back()}
+              className="sidebar-back-btn"
               style={{
                 background: "none",
                 border: "none",
@@ -164,8 +167,9 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
               onMouseEnter={(e) => { const b = e.currentTarget; b.style.color = "#FF6B1A"; b.style.background = "#FF6B1A12"; }}
               onMouseLeave={(e) => { const b = e.currentTarget; b.style.color = "#6B7280"; b.style.background = "none"; }}
             >
-              <FaArrowLeft size={11} /> Back
+              <FaArrowLeft size={11} /> <span className="sidebar-back-label">Back</span>
             </button>
+            {/* Close button: always usable, but most useful as the drawer-close on mobile */}
             <button
               onClick={toggleSidebar}
               style={{
@@ -223,6 +227,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           padding: "8px",
           scrollbarWidth: "thin",
           scrollbarColor: "#2A2A2A #111111",
+          WebkitOverflowScrolling: "touch",
         }}
       >
         {loading ? (
@@ -240,7 +245,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
               }}
             >
               <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: "#242424", flexShrink: 0, animation: "pulse 1.5s ease-in-out infinite" }} />
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ height: "13px", borderRadius: "6px", background: "#242424", width: "60%", marginBottom: "6px", animation: "pulse 1.5s ease-in-out infinite" }} />
                 <div style={{ height: "11px", borderRadius: "6px", background: "#1E1E1E", width: "80%", animation: "pulse 1.5s ease-in-out infinite" }} />
               </div>
@@ -278,7 +283,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           </div>
         ) : (
           filtered.map((conv) => {
-            const other = conv.otherParticipant || {};
+            const other = conv.otherParticipant ?? { _id: "", username: "Unknown" };
             const isSelected = conv._id === selectedId;
             return (
               <div
@@ -384,7 +389,16 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           0%, 100% { opacity: 1; }
           50% { opacity: 0.4; }
         }
-        @media (min-width: 640px) {
+        /* On mobile (drawer mode) the X close button is the primary way
+           to dismiss the sidebar, and there's no room for a separate
+           "Back" text label — collapse it to icon-only. The router-back
+           button stays available everywhere since it serves a different
+           purpose (leaving the chat feature entirely). */
+        @media (max-width: 480px) {
+          .sidebar-back-label { display: none; }
+          .sidebar-back-btn { padding: 5px !important; }
+        }
+        @media (min-width: 768px) {
           .sidebar-close-btn { display: none !important; }
         }
       `}</style>

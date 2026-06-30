@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import newRequest from "../utils/newRequest";
 import upload from "../utils/upload";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { MdOutlinePostAdd } from "react-icons/md";
 import { HiOutlinePhotograph } from "react-icons/hi";

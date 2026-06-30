@@ -21,6 +21,8 @@ export default function LayoutWrapper({
     "/login",
     "/register",
     "/pay",
+    "/meetings",
+    "/terms-privacy",
     "/seller",
     "/gigdetails",
     "/seller/profile-edit",
@@ -55,6 +57,10 @@ export default function LayoutWrapper({
       // Admin → block landing page
       if (user.isAdmin && pathname === "/") {
         router.replace("/admin");
+      }
+
+      if (user.isSeller && pathname === "/") {
+        router.replace("/seller");
       }
 
       // Remote worker → block landing page

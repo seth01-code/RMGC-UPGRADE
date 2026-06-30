@@ -78,11 +78,11 @@ const Footer: React.FC = () => {
 
   return (
     <footer className="relative bg-[#ffffff] overflow-hidden">
-      {/* Top orange border accent */}
-      {/* <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-orange-500/40 to-transparent" /> */}
+      {/* Top orange border accent — centered, partial width */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] max-w-120 h-px bg-linear-to-r from-transparent via-orange-500/60 to-transparent" />
 
       {/* Subtle glow */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[500px] h-[200px] rounded-full bg-orange-500/5 blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-125 h-50 rounded-full bg-orange-500/5 blur-[100px] pointer-events-none" />
 
       <div className="relative z-10 container mx-auto px-6 md:px-12 lg:px-20 py-14">
         {/* ── Main grid ── */}
@@ -96,7 +96,7 @@ const Footer: React.FC = () => {
               height={72}
               className="rounded-xl"
             />
-            <p className="text-[12.5px] text-[#444] leading-relaxed max-w-[180px]">
+            <p className="text-[12.5px] text-[#444] leading-relaxed max-w-45">
               Connecting organizations, freelancers, and remote talent
               worldwide.
             </p>
@@ -157,7 +157,7 @@ const Footer: React.FC = () => {
             </p>
             <div className="space-y-3">
               <div className="flex items-start gap-2.5">
-                <span className="text-[#333] mt-0.5 text-[11px] uppercase tracking-wider flex-shrink-0">
+                <span className="text-[#333] mt-0.5 text-[11px] uppercase tracking-wider shrink-0">
                   Email
                 </span>
                 <a
@@ -168,7 +168,7 @@ const Footer: React.FC = () => {
                 </a>
               </div>
               <div className="flex items-start gap-2.5">
-                <span className="text-[#333] mt-0.5 text-[11px] uppercase tracking-wider flex-shrink-0">
+                <span className="text-[#333] mt-0.5 text-[11px] uppercase tracking-wider shrink-0">
                   Addr
                 </span>
                 <span className="text-[12px] text-[#555] leading-snug">

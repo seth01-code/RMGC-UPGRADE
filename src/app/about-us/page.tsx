@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -17,12 +17,18 @@ import {
 
 import aboutBg from "../../assets/images/aboutUs.jpg";
 import founderImg from "../../assets/images/mi.jpg";
-import ctoImg from "../../assets/images/me.png";
+import ctoImg from "../../assets/images/seth.jpeg";
 import ccoImg from "../../assets/images/Ukachi.jpg";
 
-/* ── tiny helpers ── */
+/* ── palette ── */
 const OR = "#FF6B1A";
 const ORL = "#FF8C47";
+const ORANGE_GRADIENT =
+  "linear-gradient(135deg, #FFFFFF 0%, #FFF1E6 45%, #FFE0C7 100%)";
+const INK = "#111111"; // touch-of-black for headings/icons on light bg
+const BODY = "#4B5563";
+const MUTED = "#6B7280";
+const HAIRLINE = "rgba(17,17,17,0.08)";
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
@@ -41,13 +47,19 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function HeadingSlash({ children }: { children: React.ReactNode }) {
+function HeadingSlash({
+  children,
+  dark = true,
+}: {
+  children: React.ReactNode;
+  dark?: boolean;
+}) {
   return (
     <h2
       style={{
         fontSize: "clamp(32px, 5vw, 52px)",
         fontWeight: 800,
-        color: "#FFFFFF",
+        color: dark ? INK : "#FFFFFF",
         lineHeight: 1.1,
         letterSpacing: "-0.02em",
         position: "relative",
@@ -82,7 +94,7 @@ function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
       viewport={{ once: true }}
       transition={{ duration: 0.45, delay: index * 0.07 }}
       style={{
-        borderBottom: "1px solid #1F1F1F",
+        borderBottom: `1px solid ${HAIRLINE}`,
         overflow: "hidden",
       }}
     >
@@ -105,7 +117,7 @@ function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
           style={{
             fontSize: "16px",
             fontWeight: 600,
-            color: open ? OR : "#E5E7EB",
+            color: open ? OR : INK,
             transition: "color 0.2s",
             lineHeight: 1.4,
           }}
@@ -114,7 +126,7 @@ function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
         </span>
         <FaChevronDown
           size={14}
-          color={open ? OR : "#4B5563"}
+          color={open ? OR : "#9CA3AF"}
           style={{
             flexShrink: 0,
             transition: "transform 0.3s, color 0.2s",
@@ -136,7 +148,7 @@ function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
               style={{
                 fontSize: "15px",
                 lineHeight: 1.7,
-                color: "#9CA3AF",
+                color: BODY,
                 paddingBottom: "20px",
                 margin: 0,
               }}
@@ -168,38 +180,90 @@ const AboutUs: React.FC = () => {
   ];
 
   const values = [
-    { name: "Transparency", icon: <FaHandshake size={28} />, desc: "Open processes, honest communication, no hidden agendas." },
-    { name: "Integrity", icon: <FaShieldAlt size={28} />, desc: "We do what we say and say what we mean — every time." },
-    { name: "Professionalism", icon: <FaUserTie size={28} />, desc: "High standards in delivery, conduct, and client relations." },
-    { name: "Communication", icon: <FaComments size={28} />, desc: "Clear, timely, and respectful dialogue at every touchpoint." },
+    {
+      name: "Transparency",
+      icon: <FaHandshake size={28} />,
+      desc: "Open processes, honest communication, no hidden agendas.",
+    },
+    {
+      name: "Integrity",
+      icon: <FaShieldAlt size={28} />,
+      desc: "We do what we say and say what we mean — every time.",
+    },
+    {
+      name: "Professionalism",
+      icon: <FaUserTie size={28} />,
+      desc: "High standards in delivery, conduct, and client relations.",
+    },
+    {
+      name: "Communication",
+      icon: <FaComments size={28} />,
+      desc: "Clear, timely, and respectful dialogue at every touchpoint.",
+    },
   ];
 
   const faqs = [
-    { q: "What does RMGC do?", a: "Renewed Minds Global Consult connects talented freelancers, remote workers, and organizations—offering advertising, consulting, and digital solutions across industries." },
-    { q: "Who can register on RMGC?", a: "Freelancers, remote workers, and verified organizations looking to hire professionals or showcase their services can all register on RMGC." },
-    { q: "Is RMGC available outside Nigeria?", a: "Yes. RMGC serves a global audience, helping both local and international clients connect with verified professionals worldwide." },
-    { q: "How do I join as a service provider?", a: "Freelancers pay a one-time registration fee of ₦5,000 to complete their profile and start uploading gigs. Remote workers can register for free, and upgrade to VIP for premium access. Organizations pay a registration fee to post jobs." },
-    { q: "Are there recurring fees or subscription plans?", a: "Freelancers have no recurring fees beyond the one-time registration. Remote workers can choose a VIP subscription for high-paying jobs, billed yearly. Organizations pay a yearly subscription to post jobs and receive applications." },
-    { q: "What payment methods are supported?", a: "RMGC supports Paystack and Flutterwave (Card Only) for all transactions, allowing payments in Naira, USD, or other supported currencies." },
-    { q: "Do I need to verify my account?", a: "Yes. All users must verify their account using valid identification and contact details to ensure trust and security on the platform." },
+    {
+      q: "What does RMGC do?",
+      a: "Renewed Minds Global Consult connects talented freelancers, remote workers, and organizations—offering advertising, consulting, and digital solutions across industries.",
+    },
+    {
+      q: "Who can register on RMGC?",
+      a: "Freelancers, remote workers, and verified organizations looking to hire professionals or showcase their services can all register on RMGC.",
+    },
+    {
+      q: "Is RMGC available outside Nigeria?",
+      a: "Yes. RMGC serves a global audience, helping both local and international clients connect with verified professionals worldwide.",
+    },
+    {
+      q: "How do I join as a service provider?",
+      a: "Freelancers pay a one-time registration fee of ₦5,000 to complete their profile and start uploading gigs. Remote workers can register for free, and upgrade to VIP for premium access. Organizations pay a registration fee to post jobs.",
+    },
+    {
+      q: "Are there recurring fees or subscription plans?",
+      a: "Freelancers have no recurring fees beyond the one-time registration. Remote workers can choose a VIP subscription for high-paying jobs, billed yearly. Organizations pay a yearly subscription to post jobs and receive applications.",
+    },
+    {
+      q: "What payment methods are supported?",
+      a: "RMGC supports Paystack and Flutterwave (Card Only) for all transactions, allowing payments in Naira, USD, or other supported currencies.",
+    },
+    {
+      q: "Do I need to verify my account?",
+      a: "Yes. All users must verify their account using valid identification and contact details to ensure trust and security on the platform.",
+    },
   ];
 
   const communityLinks = [
-    { href: "https://t.me/rmgconsultants", icon: <FaTelegram size={18} />, label: "Telegram Community", sub: "Official channel" },
-    { href: "https://chat.whatsapp.com/DOc8WntKqOjDKeNhwcOowb", icon: <FaWhatsapp size={18} />, label: "WhatsApp — Providers", sub: "For service providers" },
-    { href: "https://chat.whatsapp.com/FXsUlpRQ7TTB2BXPRRACBS", icon: <FaWhatsapp size={18} />, label: "WhatsApp — Clients", sub: "For clients & businesses" },
+    {
+      href: "https://t.me/rmgconsultants",
+      icon: <FaTelegram size={18} />,
+      label: "Telegram Community",
+      sub: "Official channel",
+    },
+    {
+      href: "https://chat.whatsapp.com/DOc8WntKqOjDKeNhwcOowb",
+      icon: <FaWhatsapp size={18} />,
+      label: "WhatsApp — Providers",
+      sub: "For service providers",
+    },
+    {
+      href: "https://chat.whatsapp.com/FXsUlpRQ7TTB2BXPRRACBS",
+      icon: <FaWhatsapp size={18} />,
+      label: "WhatsApp — Clients",
+      sub: "For clients & businesses",
+    },
   ];
 
   return (
     <section
       style={{
-        background: "#0A0A0A",
-        color: "#FFFFFF",
+        background: "#FFFFFF",
+        color: INK,
         fontFamily: "'Inter', -apple-system, sans-serif",
         overflowX: "hidden",
       }}
     >
-      {/* ══ HERO ══ */}
+      {/* ══ HERO — photo with white/orange gradient overlay (touch of black only behind text) ══ */}
       <div
         style={{
           position: "relative",
@@ -222,15 +286,22 @@ const AboutUs: React.FC = () => {
             willChange: "transform",
           }}
         >
-          <Image src={aboutBg} alt="About Us" fill style={{ objectFit: "cover", opacity: 0.3 }} priority />
+          <Image
+            src={aboutBg}
+            alt="About Us"
+            fill
+            style={{ objectFit: "cover", opacity: 0.35 }}
+            priority
+          />
         </div>
 
-        {/* Dark gradient overlay */}
+        {/* Gradient overlay: light orange/white fading to a touch of black near the text for legibility */}
         <div
           style={{
             position: "absolute",
             inset: 0,
-            background: "linear-gradient(to bottom, rgba(10,10,10,0.4) 0%, rgba(10,10,10,0.7) 60%, #0A0A0A 100%)",
+            background:
+              "linear-gradient(to bottom, rgba(255,241,230,0.55) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0.78) 100%)",
           }}
         />
 
@@ -240,7 +311,7 @@ const AboutUs: React.FC = () => {
             position: "absolute",
             fontSize: "clamp(120px, 25vw, 280px)",
             fontWeight: 900,
-            color: "rgba(255,107,26,0.04)",
+            color: "rgba(255,107,26,0.08)",
             letterSpacing: "-0.04em",
             userSelect: "none",
             pointerEvents: "none",
@@ -252,7 +323,14 @@ const AboutUs: React.FC = () => {
         </div>
 
         {/* Hero content */}
-        <div style={{ position: "relative", zIndex: 2, textAlign: "center", padding: "0 24px" }}>
+        <div
+          style={{
+            position: "relative",
+            zIndex: 2,
+            textAlign: "center",
+            padding: "0 24px",
+          }}
+        >
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -262,7 +340,7 @@ const AboutUs: React.FC = () => {
               fontWeight: 700,
               letterSpacing: "0.22em",
               textTransform: "uppercase",
-              color: OR,
+              color: ORL,
               marginBottom: "20px",
             }}
           >
@@ -293,14 +371,14 @@ const AboutUs: React.FC = () => {
             transition={{ duration: 0.8, delay: 0.25 }}
             style={{
               fontSize: "18px",
-              color: "#9CA3AF",
+              color: "#E5E7EB",
               maxWidth: "480px",
               margin: "0 auto",
               lineHeight: 1.6,
               fontStyle: "italic",
             }}
           >
-            "Meeting Service Needs and Unlocking Possibilities."
+            &quot;Meeting Service Needs and Unlocking Possibilities.&quot;
           </motion.p>
 
           <motion.div
@@ -321,9 +399,24 @@ const AboutUs: React.FC = () => {
         </div>
       </div>
 
-      {/* ══ WHO WE ARE ══ */}
-      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "100px 24px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "80px", alignItems: "center" }}>
+      {/* ══ WHO WE ARE — white ══ */}
+      <div
+        style={{
+          background: "#FFFFFF",
+          maxWidth: "1200px",
+          margin: "0 auto",
+          padding: "100px 24px",
+        }}
+      >
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "80px",
+            alignItems: "center",
+          }}
+          className="who-grid"
+        >
           <motion.div
             initial={{ opacity: 0, x: -40 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -332,15 +425,28 @@ const AboutUs: React.FC = () => {
           >
             <SectionLabel>Our story</SectionLabel>
             <HeadingSlash>Who We Are</HeadingSlash>
-            <p style={{ fontSize: "17px", lineHeight: 1.8, color: "#9CA3AF", marginBottom: "20px" }}>
-              <strong style={{ color: "#E5E7EB" }}>Renewed Minds Global Consult (RMGC)</strong> is a cutting-edge
-              Advertising & Consulting Agency, founded on <strong style={{ color: "#E5E7EB" }}>9th November 2021</strong> by{" "}
-              <strong style={{ color: OR }}>Ms Miracle Ikhielea</strong>, alongside{" "}
-              <strong style={{ color: "#E5E7EB" }}>CTO Master Seth Ikhielea</strong>.
+            <p
+              style={{
+                fontSize: "17px",
+                lineHeight: 1.8,
+                color: BODY,
+                marginBottom: "20px",
+              }}
+            >
+              <strong style={{ color: INK }}>
+                Renewed Minds Global Consult (RMGC)
+              </strong>{" "}
+              is a cutting-edge Advertising & Consulting Agency, founded on{" "}
+              <strong style={{ color: INK }}>9th November 2021</strong> by{" "}
+              <strong style={{ color: OR }}>Ms Miracle Ikhielea</strong>,
+              alongside{" "}
+              <strong style={{ color: INK }}>CTO Master Seth Ikhielea</strong>.
             </p>
-            <p style={{ fontSize: "17px", lineHeight: 1.8, color: "#9CA3AF" }}>
-              Our mission is to <strong style={{ color: "#E5E7EB" }}>bridge the gap</strong> between skilled professionals
-              and clients worldwide — empowering both sides through technology, trust, and transparent partnerships.
+            <p style={{ fontSize: "17px", lineHeight: 1.8, color: BODY }}>
+              Our mission is to{" "}
+              <strong style={{ color: INK }}>bridge the gap</strong> between
+              skilled professionals and clients worldwide — empowering both
+              sides through technology, trust, and transparent partnerships.
             </p>
           </motion.div>
 
@@ -355,9 +461,10 @@ const AboutUs: React.FC = () => {
                 position: "relative",
                 padding: "48px 40px",
                 borderRadius: "20px",
-                background: "#111111",
-                border: "1px solid #1F1F1F",
+                background: ORANGE_GRADIENT,
+                border: `1px solid ${HAIRLINE}`,
                 overflow: "hidden",
+                boxShadow: "0 12px 40px rgba(255,107,26,0.12)",
               }}
             >
               {/* decorative corner */}
@@ -368,34 +475,59 @@ const AboutUs: React.FC = () => {
                   right: 0,
                   width: "120px",
                   height: "120px",
-                  background: `radial-gradient(circle at top right, ${OR}18, transparent 70%)`,
+                  background: `radial-gradient(circle at top right, ${OR}22, transparent 70%)`,
                 }}
               />
               <p
                 style={{
                   fontSize: "clamp(20px, 3vw, 28px)",
                   fontWeight: 700,
-                  color: "#FFFFFF",
+                  color: INK,
                   lineHeight: 1.4,
                   margin: 0,
                 }}
               >
-                "Transforming <span style={{ color: OR }}>Talent</span> into <span style={{ color: OR }}>Opportunity</span>."
+                &quot;Transforming <span style={{ color: OR }}>Talent</span> into{" "}
+                <span style={{ color: OR }}>Opportunity</span>.&quot;
               </p>
               <div
                 style={{
                   marginTop: "28px",
                   paddingTop: "24px",
-                  borderTop: "1px solid #1F1F1F",
+                  borderTop: `1px solid ${HAIRLINE}`,
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
                   gap: "20px",
                 }}
               >
-                {[["Est.", "2021"], ["Reach", "Global"], ["Users", "Verified"], ["Support", "24/7"]].map(([l, v]) => (
+                {[
+                  ["Est.", "2021"],
+                  ["Reach", "Global"],
+                  ["Users", "Verified"],
+                  ["Support", "24/7"],
+                ].map(([l, v]) => (
                   <div key={l}>
-                    <p style={{ margin: "0 0 2px", fontSize: "11px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#4B5563" }}>{l}</p>
-                    <p style={{ margin: 0, fontSize: "20px", fontWeight: 700, color: OR }}>{v}</p>
+                    <p
+                      style={{
+                        margin: "0 0 2px",
+                        fontSize: "11px",
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
+                        color: MUTED,
+                      }}
+                    >
+                      {l}
+                    </p>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "20px",
+                        fontWeight: 700,
+                        color: OR,
+                      }}
+                    >
+                      {v}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -404,20 +536,50 @@ const AboutUs: React.FC = () => {
         </div>
       </div>
 
-      {/* ══ WHY CHOOSE US ══ */}
-      <div style={{ background: "#111111", borderTop: "1px solid #1F1F1F", borderBottom: "1px solid #1F1F1F" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "100px 24px" }}>
+      {/* ══ WHY CHOOSE US — white→orange gradient ══ */}
+      <div
+        style={{
+          background: ORANGE_GRADIENT,
+          borderTop: `1px solid ${HAIRLINE}`,
+          borderBottom: `1px solid ${HAIRLINE}`,
+        }}
+      >
+        <div
+          style={{
+            maxWidth: "1200px",
+            margin: "0 auto",
+            padding: "100px 24px",
+          }}
+        >
           <div style={{ textAlign: "center", marginBottom: "64px" }}>
             <SectionLabel>Our advantage</SectionLabel>
             <HeadingSlash>Why Choose Us</HeadingSlash>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "2px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+              gap: "2px",
+            }}
+          >
             {[
-              { num: "01", text: "Built around YOU — your goals, your growth, your success." },
-              { num: "02", text: "Service providers enjoy exposure, fair pricing, and true global reach." },
-              { num: "03", text: "Clients experience verified professionals, transparency, and quality delivery." },
-              { num: "04", text: "We combine technology, ethics, and excellence for a seamless partnership." },
+              {
+                num: "01",
+                text: "Built around YOU — your goals, your growth, your success.",
+              },
+              {
+                num: "02",
+                text: "Service providers enjoy exposure, fair pricing, and true global reach.",
+              },
+              {
+                num: "03",
+                text: "Clients experience verified professionals, transparency, and quality delivery.",
+              },
+              {
+                num: "04",
+                text: "We combine technology, ethics, and excellence for a seamless partnership.",
+              },
             ].map((item, i) => (
               <motion.div
                 key={i}
@@ -427,32 +589,68 @@ const AboutUs: React.FC = () => {
                 transition={{ duration: 0.5, delay: i * 0.1 }}
                 style={{
                   padding: "36px 32px",
-                  background: "#0A0A0A",
+                  background: "#FFFFFF",
                   borderTop: `3px solid ${i === 0 ? OR : "transparent"}`,
                   transition: "border-color 0.2s",
                   cursor: "default",
                 }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.borderTopColor = OR)}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.borderTopColor = "transparent")}
+                onMouseEnter={(e) =>
+                  ((e.currentTarget as HTMLDivElement).style.borderTopColor =
+                    OR)
+                }
+                onMouseLeave={(e) =>
+                  ((e.currentTarget as HTMLDivElement).style.borderTopColor =
+                    "transparent")
+                }
               >
-                <p style={{ margin: "0 0 16px", fontSize: "36px", fontWeight: 900, color: "#1A1A1A", lineHeight: 1 }}>
+                <p
+                  style={{
+                    margin: "0 0 16px",
+                    fontSize: "36px",
+                    fontWeight: 900,
+                    color: "#E8E2DC",
+                    lineHeight: 1,
+                  }}
+                >
                   {item.num}
                 </p>
-                <p style={{ margin: 0, fontSize: "16px", lineHeight: 1.7, color: "#9CA3AF" }}>{item.text}</p>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "16px",
+                    lineHeight: 1.7,
+                    color: BODY,
+                  }}
+                >
+                  {item.text}
+                </p>
               </motion.div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ══ LEADERSHIP ══ */}
-      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "100px 24px" }}>
+      {/* ══ LEADERSHIP — white ══ */}
+      <div
+        style={{
+          background: "#FFFFFF",
+          maxWidth: "1200px",
+          margin: "0 auto",
+          padding: "100px 24px",
+        }}
+      >
         <div style={{ textAlign: "center", marginBottom: "64px" }}>
           <SectionLabel>The people behind RMGC</SectionLabel>
           <HeadingSlash>Leadership</HeadingSlash>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "24px" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: "24px",
+          }}
+        >
           {leaders.map((leader, i) => (
             <motion.div
               key={i}
@@ -461,36 +659,48 @@ const AboutUs: React.FC = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: i * 0.15 }}
               style={{
-                background: "#111111",
-                border: "1px solid #1F1F1F",
+                background: "#FFFFFF",
+                border: `1px solid ${HAIRLINE}`,
                 borderRadius: "20px",
                 overflow: "hidden",
-                transition: "border-color 0.2s, transform 0.2s",
+                transition:
+                  "border-color 0.2s, transform 0.2s, box-shadow 0.2s",
+                boxShadow: "0 2px 12px rgba(17,17,17,0.04)",
               }}
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLDivElement;
-                el.style.borderColor = "#FF6B1A40";
+                el.style.borderColor = "#FF6B1A60";
                 el.style.transform = "translateY(-4px)";
+                el.style.boxShadow = "0 12px 28px rgba(255,107,26,0.15)";
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLDivElement;
-                el.style.borderColor = "#1F1F1F";
+                el.style.borderColor = HAIRLINE;
                 el.style.transform = "translateY(0)";
+                el.style.boxShadow = "0 2px 12px rgba(17,17,17,0.04)";
               }}
             >
-              {/* Image area */}
-              <div style={{ position: "relative", height: "280px", overflow: "hidden", background: "#0F0F0F" }}>
+              {/* Image area — touch of black via dark base + gradient scrim */}
+              <div
+                style={{
+                  position: "relative",
+                  height: "280px",
+                  overflow: "hidden",
+                  background: "#0F0F0F",
+                }}
+              >
                 <Image
                   src={leader.img}
                   alt={leader.name}
                   fill
-                  style={{ objectFit: "cover", objectPosition: "top", opacity: 0.9 }}
+                  style={{ objectFit: "cover", objectPosition: "top" }}
                 />
                 <div
                   style={{
                     position: "absolute",
                     inset: 0,
-                    background: "linear-gradient(to top, #111111 0%, transparent 60%)",
+                    background:
+                      "linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%)",
                   }}
                 />
               </div>
@@ -509,22 +719,48 @@ const AboutUs: React.FC = () => {
                 >
                   {leader.role}
                 </p>
-                <h3 style={{ margin: 0, fontSize: "22px", fontWeight: 700, color: "#FFFFFF" }}>{leader.name}</h3>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: "22px",
+                    fontWeight: 700,
+                    color: INK,
+                  }}
+                >
+                  {leader.name}
+                </h3>
               </div>
             </motion.div>
           ))}
         </div>
       </div>
 
-      {/* ══ CORE VALUES ══ */}
-      <div style={{ background: "#111111", borderTop: "1px solid #1F1F1F" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "100px 24px" }}>
+      {/* ══ CORE VALUES — white→orange gradient ══ */}
+      <div
+        style={{
+          background: ORANGE_GRADIENT,
+          borderTop: `1px solid ${HAIRLINE}`,
+        }}
+      >
+        <div
+          style={{
+            maxWidth: "1200px",
+            margin: "0 auto",
+            padding: "100px 24px",
+          }}
+        >
           <div style={{ textAlign: "center", marginBottom: "64px" }}>
             <SectionLabel>What we stand for</SectionLabel>
             <HeadingSlash>Core Values</HeadingSlash>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "20px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gap: "20px",
+            }}
+          >
             {values.map((val, i) => (
               <motion.div
                 key={i}
@@ -534,13 +770,22 @@ const AboutUs: React.FC = () => {
                 transition={{ duration: 0.5, delay: i * 0.1 }}
                 style={{
                   padding: "36px 28px",
-                  background: "#0A0A0A",
+                  background: "#FFFFFF",
                   borderRadius: "16px",
-                  border: "1px solid #1F1F1F",
-                  transition: "border-color 0.2s",
+                  border: `1px solid ${HAIRLINE}`,
+                  transition: "border-color 0.2s, box-shadow 0.2s",
+                  boxShadow: "0 2px 12px rgba(17,17,17,0.04)",
                 }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "#FF6B1A40")}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "#1F1F1F")}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget as HTMLDivElement;
+                  el.style.borderColor = "#FF6B1A50";
+                  el.style.boxShadow = "0 8px 24px rgba(255,107,26,0.14)";
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget as HTMLDivElement;
+                  el.style.borderColor = HAIRLINE;
+                  el.style.boxShadow = "0 2px 12px rgba(17,17,17,0.04)";
+                }}
               >
                 <div
                   style={{
@@ -558,16 +803,42 @@ const AboutUs: React.FC = () => {
                 >
                   {val.icon}
                 </div>
-                <h3 style={{ margin: "0 0 10px", fontSize: "18px", fontWeight: 700, color: "#FFFFFF" }}>{val.name}</h3>
-                <p style={{ margin: 0, fontSize: "14px", color: "#6B7280", lineHeight: 1.6 }}>{val.desc}</p>
+                <h3
+                  style={{
+                    margin: "0 0 10px",
+                    fontSize: "18px",
+                    fontWeight: 700,
+                    color: INK,
+                  }}
+                >
+                  {val.name}
+                </h3>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "14px",
+                    color: MUTED,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {val.desc}
+                </p>
               </motion.div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ══ GLOBAL REACH ══ */}
-      <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "100px 24px", textAlign: "center" }}>
+      {/* ══ GLOBAL REACH — white ══ */}
+      <div
+        style={{
+          background: "#FFFFFF",
+          maxWidth: "1000px",
+          margin: "0 auto",
+          padding: "100px 24px",
+          textAlign: "center",
+        }}
+      >
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -592,22 +863,46 @@ const AboutUs: React.FC = () => {
           </div>
           <SectionLabel>Where we operate</SectionLabel>
           <HeadingSlash>Global Reach</HeadingSlash>
-          <p style={{ fontSize: "18px", lineHeight: 1.8, color: "#9CA3AF", maxWidth: "600px", margin: "0 auto" }}>
-            Though proudly based in <strong style={{ color: "#E5E7EB" }}>Nigeria</strong>, RMGC transcends borders —
-            leveraging innovation to connect talent and clients across continents.
+          <p
+            style={{
+              fontSize: "18px",
+              lineHeight: 1.8,
+              color: BODY,
+              maxWidth: "600px",
+              margin: "0 auto",
+            }}
+          >
+            Though proudly based in{" "}
+            <strong style={{ color: INK }}>Nigeria</strong>, RMGC transcends
+            borders — leveraging innovation to connect talent and clients across
+            continents.
           </p>
         </motion.div>
       </div>
 
-      {/* ══ COMMUNITY ══ */}
-      <div style={{ background: "#111111", borderTop: "1px solid #1F1F1F", borderBottom: "1px solid #1F1F1F" }}>
-        <div style={{ maxWidth: "900px", margin: "0 auto", padding: "80px 24px" }}>
+      {/* ══ COMMUNITY — white→orange gradient ══ */}
+      <div
+        style={{
+          background: ORANGE_GRADIENT,
+          borderTop: `1px solid ${HAIRLINE}`,
+          borderBottom: `1px solid ${HAIRLINE}`,
+        }}
+      >
+        <div
+          style={{ maxWidth: "900px", margin: "0 auto", padding: "80px 24px" }}
+        >
           <div style={{ textAlign: "center", marginBottom: "48px" }}>
             <SectionLabel>Stay connected</SectionLabel>
             <HeadingSlash>Join the Community</HeadingSlash>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gap: "16px",
+            }}
+          >
             {communityLinks.map((link, i) => (
               <motion.a
                 key={i}
@@ -623,22 +918,26 @@ const AboutUs: React.FC = () => {
                   alignItems: "center",
                   gap: "16px",
                   padding: "20px 24px",
-                  background: "#0A0A0A",
-                  border: "1px solid #1F1F1F",
+                  background: "#FFFFFF",
+                  border: `1px solid ${HAIRLINE}`,
                   borderRadius: "14px",
                   textDecoration: "none",
-                  transition: "border-color 0.2s, transform 0.2s",
+                  transition:
+                    "border-color 0.2s, transform 0.2s, box-shadow 0.2s",
                   color: "inherit",
+                  boxShadow: "0 2px 12px rgba(17,17,17,0.04)",
                 }}
                 onMouseEnter={(e) => {
                   const el = e.currentTarget as HTMLAnchorElement;
-                  el.style.borderColor = "#FF6B1A40";
+                  el.style.borderColor = "#FF6B1A55";
                   el.style.transform = "translateY(-2px)";
+                  el.style.boxShadow = "0 10px 24px rgba(255,107,26,0.14)";
                 }}
                 onMouseLeave={(e) => {
                   const el = e.currentTarget as HTMLAnchorElement;
-                  el.style.borderColor = "#1F1F1F";
+                  el.style.borderColor = HAIRLINE;
                   el.style.transform = "translateY(0)";
+                  el.style.boxShadow = "0 2px 12px rgba(17,17,17,0.04)";
                 }}
               >
                 <div
@@ -658,18 +957,36 @@ const AboutUs: React.FC = () => {
                   {link.icon}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ margin: "0 0 2px", fontSize: "14px", fontWeight: 600, color: "#E5E7EB" }}>{link.label}</p>
-                  <p style={{ margin: 0, fontSize: "12px", color: "#4B5563" }}>{link.sub}</p>
+                  <p
+                    style={{
+                      margin: "0 0 2px",
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      color: INK,
+                    }}
+                  >
+                    {link.label}
+                  </p>
+                  <p style={{ margin: 0, fontSize: "12px", color: MUTED }}>
+                    {link.sub}
+                  </p>
                 </div>
-                <FaArrowRight size={12} color="#4B5563" />
+                <FaArrowRight size={12} color={MUTED} />
               </motion.a>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ══ FAQ ══ */}
-      <div style={{ maxWidth: "800px", margin: "0 auto", padding: "100px 24px" }}>
+      {/* ══ FAQ — white ══ */}
+      <div
+        style={{
+          background: "#FFFFFF",
+          maxWidth: "800px",
+          margin: "0 auto",
+          padding: "100px 24px",
+        }}
+      >
         <div style={{ textAlign: "center", marginBottom: "64px" }}>
           <SectionLabel>Got questions?</SectionLabel>
           <HeadingSlash>Frequently Asked</HeadingSlash>
@@ -682,14 +999,14 @@ const AboutUs: React.FC = () => {
         </div>
       </div>
 
-      {/* ══ FOOTER CTA ══ */}
+      {/* ══ FOOTER CTA — touch of black panel, set within the light page ══ */}
       <div
         style={{
           position: "relative",
           textAlign: "center",
           padding: "100px 24px",
           overflow: "hidden",
-          borderTop: "1px solid #1F1F1F",
+          background: "#0E0E0E",
         }}
       >
         <div
@@ -701,7 +1018,7 @@ const AboutUs: React.FC = () => {
             width: "600px",
             height: "600px",
             borderRadius: "50%",
-            background: `radial-gradient(circle, ${OR}10 0%, transparent 70%)`,
+            background: `radial-gradient(circle, ${OR}18 0%, transparent 70%)`,
             pointerEvents: "none",
           }}
         />
@@ -712,7 +1029,16 @@ const AboutUs: React.FC = () => {
           transition={{ duration: 0.7 }}
           style={{ position: "relative", zIndex: 1 }}
         >
-          <p style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: OR, marginBottom: "16px" }}>
+          <p
+            style={{
+              fontSize: "11px",
+              fontWeight: 700,
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              color: ORL,
+              marginBottom: "16px",
+            }}
+          >
             Ready to get started?
           </p>
           <h2

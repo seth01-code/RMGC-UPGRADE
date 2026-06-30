@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -11,6 +12,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import ClipLoader from "react-spinners/ClipLoader";
+import { toast } from "sonner";
 
 import logo from "../../assets/logoo.webp";
 import backgroundImage from "../../assets/wallpaper.jpg";
@@ -22,7 +24,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [focusedField, setFocusedField] = useState<"username" | "password" | null>(null);
+const [focusedField, setFocusedField] = useState<"username" | "password" | null>(null);
 
   useEffect(() => {
     const userCookie = Cookies.get("currentUser");
@@ -43,17 +45,41 @@ export default function LoginPage() {
       localStorage.setItem("currentUser", JSON.stringify(userData));
 
       if (userData.role === "organization") {
-        router.push(userData.vipSubscription?.active ? "/organization/dashboard" : "/organization/terms-privacy");
+        router.push(
+          userData.vipSubscription?.active
+            ? "/organization/dashboard"
+            : "/organization/terms-privacy",
+        );
       } else if (userData.role === "remote_worker") {
         router.push("/remote/dashboard");
+      } else if (userData.isSeller) {
+        router.push("/seller");
       } else {
         router.push("/");
       }
     } catch (err: any) {
+      const data = err.response?.data;
+
+      if (data?.error === "account_suspended") {
+        toast.error("Account Suspended", {
+          description:
+            data.reason ||
+            "Your account has been suspended. Please contact support.",
+          duration: 8000,
+          style: {
+            background: "#fff7f0",
+            border: "1px solid #fed7aa",
+            color: "#111",
+          },
+        });
+        setLoading(false);
+        return;
+      }
+
       setError(
-        err.response?.data?.error === "Incorrect password"
+        data?.error === "Incorrect password"
           ? "Incorrect password. Please try again."
-          : err.response?.data?.error || "Something went wrong."
+          : data?.error || "Something went wrong.",
       );
     } finally {
       setLoading(false);
@@ -62,9 +88,8 @@ export default function LoginPage() {
 
   return (
     <div className="relative w-full min-h-screen flex overflow-hidden">
-
       {/* ── Left panel — background image (desktop only) ── */}
-      <div className="hidden lg:block relative w-[55%] flex-shrink-0">
+      <div className="hidden lg:block relative w-[55%] shrink-0">
         <Image
           src={backgroundImage}
           alt="Background"
@@ -91,12 +116,20 @@ export default function LoginPage() {
         <div className="absolute inset-0 flex flex-col justify-between p-12 z-10">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <Image src={logo} alt="RMGC" width={36} height={36} className="rounded-xl object-cover" />
+            <Image
+              src={logo}
+              alt="RMGC"
+              width={36}
+              height={36}
+              className="rounded-xl object-cover"
+            />
             <div>
               <p className="text-white font-extrabold text-[15px] leading-none tracking-wide">
                 <span className="text-orange-500">RM</span>GC
               </p>
-              <p className="text-[10px] text-white/40 tracking-widest uppercase mt-0.5">Platform</p>
+              <p className="text-[10px] text-white/40 tracking-widest uppercase mt-0.5">
+                Platform
+              </p>
             </div>
           </div>
 
@@ -108,7 +141,8 @@ export default function LoginPage() {
               <span className="text-orange-500">globally.</span>
             </h2>
             <p className="text-[13px] text-white/50 max-w-[300px] leading-relaxed">
-              Freelancers, organizations, and remote talent — all on one trusted platform.
+              Freelancers, organizations, and remote talent — all on one trusted
+              platform.
             </p>
 
             {/* Stats strip */}
@@ -118,9 +152,16 @@ export default function LoginPage() {
                 { value: "480+", label: "Projects" },
                 { value: "6", label: "Countries" },
               ].map((s, i) => (
-                <div key={i} className={`${i > 0 ? "pl-6 border-l border-white/10" : ""}`}>
-                  <p className="text-[16px] font-extrabold text-white">{s.value}</p>
-                  <p className="text-[10px] text-white/40 uppercase tracking-wider">{s.label}</p>
+                <div
+                  key={i}
+                  className={`${i > 0 ? "pl-6 border-l border-white/10" : ""}`}
+                >
+                  <p className="text-[16px] font-extrabold text-white">
+                    {s.value}
+                  </p>
+                  <p className="text-[10px] text-white/40 uppercase tracking-wider">
+                    {s.label}
+                  </p>
                 </div>
               ))}
             </div>
@@ -135,7 +176,6 @@ export default function LoginPage() {
 
       {/* ── Right panel — form ── */}
       <div className="flex-1 bg-white flex items-center justify-center px-6 py-12 relative">
-
         {/* Subtle top orange line */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-orange-500 lg:hidden" />
 
@@ -150,7 +190,13 @@ export default function LoginPage() {
         >
           {/* Mobile logo */}
           <div className="flex items-center gap-3 mb-10 lg:hidden">
-            <Image src={logo} alt="RMGC" width={32} height={32} className="rounded-xl object-cover" />
+            <Image
+              src={logo}
+              alt="RMGC"
+              width={32}
+              height={32}
+              className="rounded-xl object-cover"
+            />
             <p className="font-extrabold text-[15px] text-[#111]">
               <span className="text-orange-500">RM</span>GC
             </p>
@@ -168,8 +214,11 @@ export default function LoginPage() {
               Sign in to your account
             </h1>
             <p className="text-[13px] text-[#aaa] mt-2">
-              Don't have an account?{" "}
-              <Link href="/register" className="text-orange-500 font-semibold hover:underline">
+              Don&apos;t have an account?{" "}
+              <Link
+                href="/register"
+                className="text-orange-500 font-semibold hover:underline"
+              >
                 Sign up free
               </Link>
             </p>
@@ -177,20 +226,25 @@ export default function LoginPage() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-
             {/* Username */}
             <div>
               <label className="text-[10px] font-bold tracking-[0.14em] text-[#aaa] uppercase mb-1.5 block">
                 Username
               </label>
-              <div className={`flex items-center gap-3 border-2 rounded-xl px-4 py-3 transition-all duration-200 bg-white ${
-                focusedField === "username"
-                  ? "border-orange-500 shadow-[0_0_0_4px_rgba(249,115,22,0.08)]"
-                  : "border-[#f0f0f0] hover:border-[#e0e0e0]"
-              }`}>
-                <MdAlternateEmail className={`text-[17px] flex-shrink-0 transition-colors ${
-                  focusedField === "username" ? "text-orange-500" : "text-[#ccc]"
-                }`} />
+              <div
+                className={`flex items-center gap-3 border-2 rounded-xl px-4 py-3 transition-all duration-200 bg-white ${
+                  focusedField === "username"
+                    ? "border-orange-500 shadow-[0_0_0_4px_rgba(249,115,22,0.08)]"
+                    : "border-[#f0f0f0] hover:border-[#e0e0e0]"
+                }`}
+              >
+                <MdAlternateEmail
+                  className={`text-[17px] flex-shrink-0 transition-colors ${
+                    focusedField === "username"
+                      ? "text-orange-500"
+                      : "text-[#ccc]"
+                  }`}
+                />
                 <input
                   type="text"
                   placeholder="Enter your username"
@@ -217,14 +271,20 @@ export default function LoginPage() {
                   Forgot password?
                 </Link>
               </div>
-              <div className={`flex items-center gap-3 border-2 rounded-xl px-4 py-3 transition-all duration-200 bg-white ${
-                focusedField === "password"
-                  ? "border-orange-500 shadow-[0_0_0_4px_rgba(249,115,22,0.08)]"
-                  : "border-[#f0f0f0] hover:border-[#e0e0e0]"
-              }`}>
-                <FaFingerprint className={`text-[17px] flex-shrink-0 transition-colors ${
-                  focusedField === "password" ? "text-orange-500" : "text-[#ccc]"
-                }`} />
+              <div
+                className={`flex items-center gap-3 border-2 rounded-xl px-4 py-3 transition-all duration-200 bg-white ${
+                  focusedField === "password"
+                    ? "border-orange-500 shadow-[0_0_0_4px_rgba(249,115,22,0.08)]"
+                    : "border-[#f0f0f0] hover:border-[#e0e0e0]"
+                }`}
+              >
+                <FaFingerprint
+                  className={`text-[17px] flex-shrink-0 transition-colors ${
+                    focusedField === "password"
+                      ? "text-orange-500"
+                      : "text-[#ccc]"
+                  }`}
+                />
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
@@ -240,7 +300,11 @@ export default function LoginPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="text-[#ccc] hover:text-orange-500 transition-colors flex-shrink-0"
                 >
-                  {showPassword ? <FaRegEyeSlash className="text-[15px]" /> : <FaRegEye className="text-[15px]" />}
+                  {showPassword ? (
+                    <FaRegEyeSlash className="text-[15px]" />
+                  ) : (
+                    <FaRegEye className="text-[15px]" />
+                  )}
                 </button>
               </div>
             </div>
@@ -294,11 +358,17 @@ export default function LoginPage() {
           {/* Footer note */}
           <p className="text-center text-[11px] text-[#ddd] mt-6 leading-relaxed">
             By signing in, you agree to our{" "}
-            <Link href="/terms-privacy" className="text-[#bbb] hover:text-orange-500 transition-colors">
+            <Link
+              href="/terms-privacy"
+              className="text-[#bbb] hover:text-orange-500 transition-colors"
+            >
               Terms of Service
             </Link>{" "}
             and{" "}
-            <Link href="/terms-privacy" className="text-[#bbb] hover:text-orange-500 transition-colors">
+            <Link
+              href="/terms-privacy"
+              className="text-[#bbb] hover:text-orange-500 transition-colors"
+            >
               Privacy Policy
             </Link>
           </p>

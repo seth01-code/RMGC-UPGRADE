@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Briefcase, Clock, CheckCircle, XCircle } from "lucide-react";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import newRequest from "../../utils/newRequest"; // make sure this points to your axios instance
 
 interface Application {

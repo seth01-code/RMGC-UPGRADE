@@ -1,5 +1,5 @@
 import axios from "axios";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 
 const MAX_LIMITS: Record<"image" | "video" | "raw", number> = {
   image: 10 * 1024 * 1024, // 10MB
@@ -10,6 +10,7 @@ const MAX_LIMITS: Record<"image" | "video" | "raw", number> = {
 const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB
 
 type UploadResponse = {
+  secure_url: string;
   url: string;
   public_id: string;
 } | null;

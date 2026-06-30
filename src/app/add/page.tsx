@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, {
@@ -13,22 +14,18 @@ import newRequest from "../utils/newRequest";
 import upload from "../utils/upload";
 import { gigReducer, INITIAL_STATE, GigState } from "../reducers/gigReducer";
 import { useExchangeRate } from "../hooks/useExchangeRate";
-import { toast, ToastContainer } from "react-toastify";
-// @ts-ignore
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "sonner";
+
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   HiOutlinePhotograph,
   HiOutlineVideoCamera,
   HiOutlineDocumentText,
-  HiOutlineGlobe,
-  HiOutlineLightningBolt,
   HiOutlineX,
   HiOutlineCheck,
   HiOutlinePlus,
 } from "react-icons/hi";
-import { MdOutlineAutoAwesome } from "react-icons/md";
 import { IoCloudUploadOutline } from "react-icons/io5";
 import ClipLoader from "react-spinners/ClipLoader";
 
@@ -69,7 +66,6 @@ const CATEGORIES = [
   "Cloud Computing",
 ];
 
-// ── Reusable field wrapper ──
 const Field = ({
   label,
   hint,
@@ -90,11 +86,9 @@ const Field = ({
   </div>
 );
 
-// ── Input style ──
 const inputCls =
   "w-full border-2 border-[#f0f0f0] focus:border-orange-400 focus:shadow-[0_0_0_4px_rgba(249,115,22,0.07)] rounded-xl px-4 py-3 text-[13.5px] text-[#111] placeholder:text-[#ccc] outline-none transition-all bg-white";
 
-// ── Upload zone ──
 const DropZone = ({
   label,
   icon,
@@ -125,7 +119,6 @@ const DropZone = ({
   </label>
 );
 
-// ── Section card ──
 const Section = ({
   title,
   eyebrow,
@@ -159,10 +152,6 @@ const Add: React.FC = () => {
   const [categoryInput, setCategoryInput] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [country, setCountry] = useState("United States");
-  const [portfolioUrl, setPortfolioUrl] = useState("");
-  const [portfolioMode, setPortfolioMode] = useState<"upload" | "url">(
-    "upload",
-  );
   const [step, setStep] = useState<1 | 2>(1);
 
   const currentUser: any =
@@ -180,7 +169,7 @@ const Add: React.FC = () => {
     if (userData?.country) setCountry(userData.country);
   }, [userData]);
 
-  const { exchangeRate } = useExchangeRate(country);
+  const { exchangeRate, countryCurrency } = useExchangeRate(country);
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -216,14 +205,12 @@ const Add: React.FC = () => {
       const cover = singleFile?.type.startsWith("image/")
         ? (await upload(singleFile))?.url || ""
         : "";
-
       const uploads = await Promise.all(
         files.map(async (file) => {
           const up = await upload(file);
           return { url: up?.url || "", type: file.type };
         }),
       );
-
       dispatch({
         type: "ADD_IMAGES",
         payload: {
@@ -257,26 +244,31 @@ const Add: React.FC = () => {
     onError: () => toast.error("Failed to create gig"),
   });
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    const priceUSD = (Number(state.price) / exchangeRate).toFixed(0);
-    mutation.mutate({ ...state, price: Number(priceUSD) });
+    const localAmount = Number(state.price);
+    const priceUSDCents = Math.round((localAmount / exchangeRate) * 100);
+    mutation.mutate({
+      ...state,
+      price: Math.round(priceUSDCents / 100),
+      priceCents: priceUSDCents,
+      originalPrice: localAmount,
+      originalCurrency: countryCurrency,
+    });
   };
 
   const imageFiles = files.filter((f) => f.type.startsWith("image/"));
   const videoFiles = files.filter((f) => f.type.startsWith("video/"));
   const pdfFiles = files.filter((f) => f.type === "application/pdf");
-
   const filteredCats = CATEGORIES.filter((c) =>
     c.toLowerCase().includes(categoryInput.toLowerCase()),
   );
 
   return (
     <div className="min-h-screen bg-white">
-      <ToastContainer position="top-center" autoClose={3000} pauseOnHover />
+      
 
       <div className="max-w-screen-xl mx-auto px-6 md:px-12 py-12">
-        {/* ── Page header ── */}
         <div className="mb-10">
           <div className="flex items-center gap-3 mb-3">
             <div className="h-px w-6 bg-orange-500" />
@@ -296,21 +288,15 @@ const Add: React.FC = () => {
         <div className="flex items-center gap-1 mb-8 border-b border-[#f0f0f0]">
           {[
             { n: 1 as const, label: "Gig details" },
-            { n: 2 as const, label: "Media & portfolio" },
+            { n: 2 as const, label: "Media & samples" },
           ].map((s) => (
             <button
               key={s.n}
               onClick={() => setStep(s.n)}
-              className={`relative flex items-center gap-2 px-4 py-3 text-[13px] font-semibold transition-colors ${
-                step === s.n ? "text-[#111]" : "text-[#bbb] hover:text-[#888]"
-              }`}
+              className={`relative flex items-center gap-2 px-4 py-3 text-[13px] font-semibold transition-colors ${step === s.n ? "text-[#111]" : "text-[#bbb] hover:text-[#888]"}`}
             >
               <span
-                className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center flex-shrink-0 ${
-                  step === s.n
-                    ? "bg-orange-500 text-white"
-                    : "bg-[#f5f5f5] text-[#bbb]"
-                }`}
+                className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center flex-shrink-0 ${step === s.n ? "bg-orange-500 text-white" : "bg-[#f5f5f5] text-[#bbb]"}`}
               >
                 {s.n}
               </span>
@@ -327,7 +313,7 @@ const Add: React.FC = () => {
 
         <form onSubmit={handleSubmit}>
           <AnimatePresence mode="wait">
-            {/* ══ STEP 1 — Gig details ══ */}
+            {/* ══ STEP 1 ══ */}
             {step === 1 && (
               <motion.div
                 key="step1"
@@ -344,13 +330,13 @@ const Add: React.FC = () => {
                       <input
                         type="text"
                         name="title"
+                        value={state.title || ""}
                         onChange={handleChange}
                         placeholder="e.g. I will design a professional logo"
                         className={inputCls}
                       />
                     </Field>
 
-                    {/* Category autocomplete */}
                     <Field label="Category">
                       <div className="relative">
                         <input
@@ -392,11 +378,7 @@ const Add: React.FC = () => {
                                     });
                                     setShowDropdown(false);
                                   }}
-                                  className={`w-full text-left px-3.5 py-2.5 text-[12.5px] font-medium rounded-xl transition-all ${
-                                    categoryInput === cat
-                                      ? "bg-orange-500/10 text-orange-500"
-                                      : "text-[#555] hover:bg-[#f7f7f7] hover:text-[#111]"
-                                  }`}
+                                  className={`w-full text-left px-3.5 py-2.5 text-[12.5px] font-medium rounded-xl transition-all ${categoryInput === cat ? "bg-orange-500/10 text-orange-500" : "text-[#555] hover:bg-[#f7f7f7] hover:text-[#111]"}`}
                                 >
                                   {cat}
                                 </button>
@@ -410,6 +392,7 @@ const Add: React.FC = () => {
                     <Field label="Description" hint="Min. 100 characters">
                       <textarea
                         name="desc"
+                        value={state.desc || ""}
                         onChange={handleChange}
                         rows={5}
                         placeholder="Describe what you offer, your process, and what makes you different..."
@@ -418,7 +401,6 @@ const Add: React.FC = () => {
                     </Field>
                   </Section>
 
-                  {/* Cover image */}
                   <Section eyebrow="Thumbnail" title="Cover image">
                     {coverPreview ? (
                       <div className="relative w-full h-[200px] rounded-2xl overflow-hidden border border-[#f0f0f0]">
@@ -488,7 +470,7 @@ const Add: React.FC = () => {
                       </Field>
                     </div>
 
-                    <Field label="Price" hint={`In your local currency`}>
+                    <Field label="Price" hint="In your local currency">
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[13px] font-bold text-[#bbb]">
                           {country === "Nigeria" ? "₦" : "$"}
@@ -502,11 +484,25 @@ const Add: React.FC = () => {
                           className={`${inputCls} pl-8`}
                         />
                       </div>
+                      {Number(state.price) > 0 && exchangeRate !== 1 && (
+                        <p className="text-[11px] text-[#bbb] mt-1.5 pl-1">
+                          ≈ $
+                          {(Number(state.price) / exchangeRate).toLocaleString(
+                            "en-US",
+                            {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            },
+                          )}{" "}
+                          USD stored
+                        </p>
+                      )}
                     </Field>
 
                     <Field label="Short service title">
                       <input
                         name="shortTitle"
+                        value={state.shortTitle || ""}
                         onChange={handleChange}
                         placeholder="e.g. Professional logo design"
                         className={inputCls}
@@ -519,6 +515,7 @@ const Add: React.FC = () => {
                     >
                       <textarea
                         name="shortDesc"
+                        value={state.shortDesc || ""}
                         onChange={handleChange}
                         rows={3}
                         placeholder="One-line pitch for your gig..."
@@ -527,7 +524,6 @@ const Add: React.FC = () => {
                     </Field>
                   </Section>
 
-                  {/* Features */}
                   <Section eyebrow="Inclusions" title="What's included">
                     <div className="flex items-center gap-2">
                       <input
@@ -551,7 +547,6 @@ const Add: React.FC = () => {
                         <HiOutlinePlus className="text-[16px]" />
                       </button>
                     </div>
-
                     <div className="flex flex-wrap gap-2 mt-1">
                       <AnimatePresence>
                         {state.features.map((f: string) => (
@@ -580,7 +575,6 @@ const Add: React.FC = () => {
                     </div>
                   </Section>
 
-                  {/* Next button */}
                   <button
                     type="button"
                     onClick={() => setStep(2)}
@@ -601,7 +595,7 @@ const Add: React.FC = () => {
               </motion.div>
             )}
 
-            {/* ══ STEP 2 — Media & portfolio ══ */}
+            {/* ══ STEP 2 — Sample media only ══ */}
             {step === 2 && (
               <motion.div
                 key="step2"
@@ -609,302 +603,162 @@ const Add: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
-                className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+                className="max-w-2xl"
               >
-                {/* Left — media uploads */}
-                <div className="space-y-6">
-                  <Section eyebrow="Sample work" title="Upload media files">
-                    <p className="text-[12.5px] text-[#aaa] leading-relaxed -mt-2">
-                      Add images, videos, or PDF documents that showcase your
-                      work.
+                <Section eyebrow="Sample work" title="Upload media files">
+                  <p className="text-[12.5px] text-[#aaa] leading-relaxed -mt-2">
+                    Add images, videos, or PDF documents that showcase your
+                    work.
+                  </p>
+
+                  <div>
+                    <p className="text-[11px] font-bold tracking-[0.12em] text-[#bbb] uppercase mb-2">
+                      Images
                     </p>
-
-                    {/* Images */}
-                    <div>
-                      <p className="text-[11px] font-bold tracking-[0.12em] text-[#bbb] uppercase mb-2">
-                        Images
-                      </p>
-                      <DropZone
-                        label="Click to upload images"
-                        icon={<HiOutlinePhotograph />}
-                        accept="image/*"
-                        multiple
-                        onChange={(f) =>
-                          setFiles((p) => [
-                            ...p,
-                            ...f.filter((x) => x.type.startsWith("image/")),
-                          ])
-                        }
-                      />
-                      {imageFiles.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-3">
-                          {imageFiles.map((file) => (
-                            <div
-                              key={file.name + file.lastModified}
-                              className="relative w-20 h-20"
-                            >
-                              <Image
-                                src={URL.createObjectURL(file)}
-                                alt="preview"
-                                fill
-                                className="object-cover rounded-xl border border-[#f0f0f0]"
-                              />
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setFiles((p) => p.filter((f) => f !== file))
-                                }
-                                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#111] text-white flex items-center justify-center hover:bg-red-500 transition-colors"
-                              >
-                                <HiOutlineX className="text-[9px]" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Videos */}
-                    <div>
-                      <p className="text-[11px] font-bold tracking-[0.12em] text-[#bbb] uppercase mb-2">
-                        Videos
-                      </p>
-                      <DropZone
-                        label="Click to upload videos"
-                        icon={<HiOutlineVideoCamera />}
-                        accept="video/*"
-                        multiple
-                        onChange={(f) =>
-                          setFiles((p) => [
-                            ...p,
-                            ...f.filter((x) => x.type.startsWith("video/")),
-                          ])
-                        }
-                      />
-                      {videoFiles.length > 0 && (
-                        <div className="flex flex-col gap-2 mt-3">
-                          {videoFiles.map((file) => (
-                            <div
-                              key={file.name + file.lastModified}
-                              className="flex items-center gap-3 p-3 bg-[#fafafa] border border-[#f0f0f0] rounded-xl"
-                            >
-                              <HiOutlineVideoCamera className="text-orange-400 text-[16px] flex-shrink-0" />
-                              <span className="text-[12px] text-[#555] truncate flex-1">
-                                {file.name}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setFiles((p) => p.filter((f) => f !== file))
-                                }
-                                className="text-[#ccc] hover:text-red-400 transition-colors"
-                              >
-                                <HiOutlineX className="text-[13px]" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* PDFs */}
-                    <div>
-                      <p className="text-[11px] font-bold tracking-[0.12em] text-[#bbb] uppercase mb-2">
-                        Documents
-                      </p>
-                      <DropZone
-                        label="Click to upload PDFs"
-                        icon={<HiOutlineDocumentText />}
-                        accept="application/pdf"
-                        multiple
-                        onChange={(f) =>
-                          setFiles((p) => [
-                            ...p,
-                            ...f.filter((x) => x.type === "application/pdf"),
-                          ])
-                        }
-                      />
-                      {pdfFiles.length > 0 && (
-                        <div className="flex flex-col gap-2 mt-3">
-                          {pdfFiles.map((file) => (
-                            <div
-                              key={file.name + file.lastModified}
-                              className="flex items-center gap-3 p-3 bg-[#fafafa] border border-[#f0f0f0] rounded-xl"
-                            >
-                              <HiOutlineDocumentText className="text-orange-400 text-[16px] flex-shrink-0" />
-                              <span className="text-[12px] text-[#555] truncate flex-1">
-                                {file.name}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setFiles((p) => p.filter((f) => f !== file))
-                                }
-                                className="text-[#ccc] hover:text-red-400 transition-colors"
-                              >
-                                <HiOutlineX className="text-[13px]" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Upload button */}
-                    {(imageFiles.length > 0 ||
-                      videoFiles.length > 0 ||
-                      pdfFiles.length > 0) && (
-                      <button
-                        type="button"
-                        onClick={handleUpload}
-                        disabled={uploading}
-                        className="w-full flex items-center justify-center gap-2 border-2 border-[#111] hover:bg-[#111] text-[#111] hover:text-white text-[13px] font-bold py-3 rounded-xl transition-all disabled:opacity-50"
-                      >
-                        {uploading ? (
-                          <ClipLoader size={14} color="currentColor" />
-                        ) : (
-                          <IoCloudUploadOutline className="text-[17px]" />
-                        )}
-                        {uploading
-                          ? "Uploading..."
-                          : `Upload ${imageFiles.length + videoFiles.length + pdfFiles.length} file${imageFiles.length + videoFiles.length + pdfFiles.length !== 1 ? "s" : ""}`}
-                      </button>
-                    )}
-                  </Section>
-                </div>
-
-                {/* Right — AI portfolio */}
-                <div className="space-y-6">
-                  <Section eyebrow="AI-powered" title="Portfolio extractor">
-                    {/* Coming soon badge */}
-                    <div className="flex items-center gap-2 -mt-2 mb-1">
-                      <span className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-orange-500 bg-orange-500/10 border border-orange-500/20 px-2.5 py-1 rounded-lg uppercase">
-                        <MdOutlineAutoAwesome className="text-[11px]" />
-                        AI feature
-                      </span>
-                      <span className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider text-[#aaa] bg-[#f5f5f5] border border-[#ebebeb] px-2.5 py-1 rounded-lg uppercase">
-                        <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-                        In development
-                      </span>
-                    </div>
-
-                    <p className="text-[12.5px] text-[#aaa] leading-relaxed">
-                      Instead of manually uploading sample images, paste your
-                      portfolio URL or upload your portfolio document. Our AI
-                      will extract your best work automatically.
-                    </p>
-
-                    {/* Mode toggle */}
-                    <div className="flex items-center gap-1 p-1 bg-[#f7f7f7] border border-[#f0f0f0] rounded-xl">
-                      {(["url", "upload"] as const).map((mode) => (
-                        <button
-                          key={mode}
-                          type="button"
-                          onClick={() => setPortfolioMode(mode)}
-                          className={`flex-1 flex items-center justify-center gap-2 py-2 text-[12px] font-semibold rounded-lg transition-all ${
-                            portfolioMode === mode
-                              ? "bg-white border border-[#f0f0f0] text-[#111] shadow-sm"
-                              : "text-[#bbb] hover:text-[#888]"
-                          }`}
-                        >
-                          {mode === "url" ? (
-                            <HiOutlineGlobe className="text-[14px]" />
-                          ) : (
-                            <HiOutlineDocumentText className="text-[14px]" />
-                          )}
-                          {mode === "url" ? "Website URL" : "Upload portfolio"}
-                        </button>
-                      ))}
-                    </div>
-
-                    <AnimatePresence mode="wait">
-                      {portfolioMode === "url" ? (
-                        <motion.div
-                          key="url"
-                          initial={{ opacity: 0, y: 6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -6 }}
-                          transition={{ duration: 0.15 }}
-                          className="space-y-3"
-                        >
-                          <div className="relative">
-                            <HiOutlineGlobe className="absolute left-4 top-1/2 -translate-y-1/2 text-[#ccc] text-[16px]" />
-                            <input
-                              type="url"
-                              value={portfolioUrl}
-                              onChange={(e) => setPortfolioUrl(e.target.value)}
-                              placeholder="https://yourportfolio.com"
-                              className={`${inputCls} pl-10`}
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            disabled
-                            className="w-full flex items-center justify-center gap-2 bg-[#f7f7f7] border border-[#ebebeb] text-[#ccc] text-[13px] font-bold py-3 rounded-xl cursor-not-allowed"
+                    <DropZone
+                      label="Click to upload images"
+                      icon={<HiOutlinePhotograph />}
+                      accept="image/*"
+                      multiple
+                      onChange={(f) =>
+                        setFiles((p) => [
+                          ...p,
+                          ...f.filter((x) => x.type.startsWith("image/")),
+                        ])
+                      }
+                    />
+                    {imageFiles.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {imageFiles.map((file) => (
+                          <div
+                            key={file.name + file.lastModified}
+                            className="relative w-20 h-20"
                           >
-                            <HiOutlineLightningBolt className="text-[15px]" />
-                            Extract portfolio with AI
-                          </button>
-                          <p className="text-[11px] text-center text-[#ccc]">
-                            Coming soon — AI will scan your site and pull sample
-                            work automatically.
-                          </p>
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          key="upload"
-                          initial={{ opacity: 0, y: 6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -6 }}
-                          transition={{ duration: 0.15 }}
-                          className="space-y-3"
-                        >
-                          <label className="group flex flex-col items-center justify-center gap-3 h-36 border-2 border-dashed border-[#f0f0f0] hover:border-orange-300 hover:bg-orange-500/[0.02] rounded-2xl cursor-pointer transition-all opacity-60 pointer-events-none">
-                            <div className="w-12 h-12 rounded-2xl bg-[#fafafa] border border-[#f0f0f0] flex items-center justify-center">
-                              <MdOutlineAutoAwesome className="text-[20px] text-[#ccc]" />
-                            </div>
-                            <div className="text-center">
-                              <p className="text-[12.5px] font-semibold text-[#ccc]">
-                                Upload PDF or image portfolio
-                              </p>
-                              <p className="text-[11px] text-[#ddd] mt-0.5">
-                                AI extraction coming soon
-                              </p>
-                            </div>
-                          </label>
-                          <p className="text-[11px] text-center text-[#ccc]">
-                            Soon you'll be able to upload your CV, portfolio
-                            PDF, or design files and let AI do the rest.
-                          </p>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    {/* How it will work */}
-                    <div className="border-t border-[#f5f5f5] pt-4 mt-2">
-                      <p className="text-[10px] font-bold tracking-[0.14em] text-[#bbb] uppercase mb-3">
-                        How it will work
-                      </p>
-                      <div className="space-y-2">
-                        {[
-                          "Paste your portfolio URL or upload a file",
-                          "AI scans and extracts your best sample work",
-                          "Extracted samples auto-populate your gig gallery",
-                          "Review and approve before publishing",
-                        ].map((step, i) => (
-                          <div key={i} className="flex items-start gap-3">
-                            <span className="w-5 h-5 rounded-lg bg-orange-500/10 border border-orange-500/15 flex items-center justify-center text-[9px] font-bold text-orange-500 flex-shrink-0 mt-0.5">
-                              {i + 1}
-                            </span>
-                            <span className="text-[12px] text-[#aaa] leading-snug">
-                              {step}
-                            </span>
+                            <Image
+                              src={URL.createObjectURL(file)}
+                              alt="preview"
+                              fill
+                              className="object-cover rounded-xl border border-[#f0f0f0]"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setFiles((p) => p.filter((f) => f !== file))
+                              }
+                              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#111] text-white flex items-center justify-center hover:bg-red-500 transition-colors"
+                            >
+                              <HiOutlineX className="text-[9px]" />
+                            </button>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  </Section>
-                </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <p className="text-[11px] font-bold tracking-[0.12em] text-[#bbb] uppercase mb-2">
+                      Videos
+                    </p>
+                    <DropZone
+                      label="Click to upload videos"
+                      icon={<HiOutlineVideoCamera />}
+                      accept="video/*"
+                      multiple
+                      onChange={(f) =>
+                        setFiles((p) => [
+                          ...p,
+                          ...f.filter((x) => x.type.startsWith("video/")),
+                        ])
+                      }
+                    />
+                    {videoFiles.length > 0 && (
+                      <div className="flex flex-col gap-2 mt-3">
+                        {videoFiles.map((file) => (
+                          <div
+                            key={file.name + file.lastModified}
+                            className="flex items-center gap-3 p-3 bg-[#fafafa] border border-[#f0f0f0] rounded-xl"
+                          >
+                            <HiOutlineVideoCamera className="text-orange-400 text-[16px] flex-shrink-0" />
+                            <span className="text-[12px] text-[#555] truncate flex-1">
+                              {file.name}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setFiles((p) => p.filter((f) => f !== file))
+                              }
+                              className="text-[#ccc] hover:text-red-400 transition-colors"
+                            >
+                              <HiOutlineX className="text-[13px]" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <p className="text-[11px] font-bold tracking-[0.12em] text-[#bbb] uppercase mb-2">
+                      Documents
+                    </p>
+                    <DropZone
+                      label="Click to upload PDFs"
+                      icon={<HiOutlineDocumentText />}
+                      accept="application/pdf"
+                      multiple
+                      onChange={(f) =>
+                        setFiles((p) => [
+                          ...p,
+                          ...f.filter((x) => x.type === "application/pdf"),
+                        ])
+                      }
+                    />
+                    {pdfFiles.length > 0 && (
+                      <div className="flex flex-col gap-2 mt-3">
+                        {pdfFiles.map((file) => (
+                          <div
+                            key={file.name + file.lastModified}
+                            className="flex items-center gap-3 p-3 bg-[#fafafa] border border-[#f0f0f0] rounded-xl"
+                          >
+                            <HiOutlineDocumentText className="text-orange-400 text-[16px] flex-shrink-0" />
+                            <span className="text-[12px] text-[#555] truncate flex-1">
+                              {file.name}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setFiles((p) => p.filter((f) => f !== file))
+                              }
+                              className="text-[#ccc] hover:text-red-400 transition-colors"
+                            >
+                              <HiOutlineX className="text-[13px]" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {(imageFiles.length > 0 ||
+                    videoFiles.length > 0 ||
+                    pdfFiles.length > 0) && (
+                    <button
+                      type="button"
+                      onClick={handleUpload}
+                      disabled={uploading}
+                      className="w-full flex items-center justify-center gap-2 border-2 border-[#111] hover:bg-[#111] text-[#111] hover:text-white text-[13px] font-bold py-3 rounded-xl transition-all disabled:opacity-50"
+                    >
+                      {uploading ? (
+                        <ClipLoader size={14} color="currentColor" />
+                      ) : (
+                        <IoCloudUploadOutline className="text-[17px]" />
+                      )}
+                      {uploading
+                        ? "Uploading..."
+                        : `Upload ${imageFiles.length + videoFiles.length + pdfFiles.length} file${imageFiles.length + videoFiles.length + pdfFiles.length !== 1 ? "s" : ""}`}
+                    </button>
+                  )}
+                </Section>
               </motion.div>
             )}
           </AnimatePresence>
@@ -929,7 +783,6 @@ const Add: React.FC = () => {
                 Back to details
               </button>
             )}
-
             <div className="ml-auto flex items-center gap-3">
               <button
                 type="button"

@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "sonner";
+
 
 type Tab = "terms" | "privacy";
 
@@ -55,18 +55,7 @@ const TermsPrivacy: React.FC = () => {
 
   return (
     <div className="bg-gray-50 min-h-screen text-gray-900">
-      <ToastContainer
-        position="top-center"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="colored"
-      />
+      
 
       {/* Header */}
       <header className="bg-orange-100 py-16 text-center text-black/70">

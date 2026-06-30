@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect } from "react";
@@ -10,13 +11,21 @@ declare global {
   }
 }
 
+const RESTRICTED_ROUTES = ["/chat", "/login", "/register"];
+
 const TawkToChat = () => {
   const pathname = usePathname();
-  const restrictedRoutes = ["/chat", "/login", "/register"];
 
   useEffect(() => {
-    if (restrictedRoutes.includes(pathname)) return;
-    if (document.getElementById("tawkScript")) return;
+    const isRestricted = RESTRICTED_ROUTES.includes(pathname);
+
+    if (window.Tawk_API?.hideWidget) {
+      isRestricted
+        ? window.Tawk_API.hideWidget()
+        : window.Tawk_API.showWidget();
+    }
+
+    if (document.getElementById("tawkScript") || isRestricted) return;
 
     window.Tawk_API = window.Tawk_API || {};
     window.Tawk_LoadStart = new Date();
@@ -29,27 +38,13 @@ const TawkToChat = () => {
     script.setAttribute("crossorigin", "*");
     document.body.appendChild(script);
 
-    // 🔥 FORCE LEFT POSITION WITH CSS
     const style = document.createElement("style");
     style.id = "tawkLeftFix";
     style.innerHTML = `
-      iframe[src*="tawk.to"] {
-        left: 20px !important;
-        right: auto !important;
-      }
-
-      .tawk-button,
-      .tawk-min-container {
-        left: 20px !important;
-        right: auto !important;
-      }
+      iframe[src*="tawk.to"] { left: 20px !important; right: auto !important; }
+      .tawk-button, .tawk-min-container { left: 20px !important; right: auto !important; }
     `;
     document.head.appendChild(style);
-
-    return () => {
-      document.getElementById("tawkScript")?.remove();
-      document.getElementById("tawkLeftFix")?.remove();
-    };
   }, [pathname]);
 
   return null;

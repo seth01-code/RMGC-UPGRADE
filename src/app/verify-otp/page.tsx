@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import newRequest from "../utils/newRequest";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { HiOutlineMail, HiOutlineShieldCheck } from "react-icons/hi";
 import { IoReloadOutline } from "react-icons/io5";

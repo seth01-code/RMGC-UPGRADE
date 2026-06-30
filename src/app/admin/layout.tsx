@@ -1,13 +1,11 @@
-// app/seller/layout.tsx
 import SellerNavbar from "../seller/components/navbar";
+import LayoutShell from "../seller/components/LayoutShell";
 
-export default function SellerLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex">
       <SellerNavbar />
-      <main className="flex-1 min-w-0">
-        {children}
-      </main>
+      <LayoutShell>{children}</LayoutShell>
     </div>
   );
 }

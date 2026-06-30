@@ -3,7 +3,7 @@
 import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import Image from "next/image";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { Eye, EyeOff, Upload, Camera, User, Mail, Phone, MapPin, Briefcase, Lock, FileText } from "lucide-react";
 import { useRouter } from "next/navigation";
 import newRequest from "../../utils/newRequest";
