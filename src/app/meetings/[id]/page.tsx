@@ -206,7 +206,7 @@ const MeetingRoom = () => {
           }
         };
 
-        const socket = io("http://localhost:4000");
+        const socket = io("https://api.renewedmindsglobalconsult.com");
         socketRef.current = socket;
 
         pc.onicecandidate = (event) => {
@@ -359,12 +359,17 @@ const MeetingRoom = () => {
       // don't want to kill the whole call over a flaky recognizer.
       if (event.error === "no-speech" || event.error === "aborted") return;
 
-      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      if (
+        event.error === "not-allowed" ||
+        event.error === "service-not-allowed"
+      ) {
         // Mic access for live captions was denied (or the browser blocked
         // this particular start() call for lacking a fresh user gesture,
         // which auto-restart can't provide). Retrying is futile and just
         // keeps re-requesting the mic — stop instead of looping forever.
-        console.warn("Speech recognition permission denied; disabling captions.");
+        console.warn(
+          "Speech recognition permission denied; disabling captions.",
+        );
         transcriptOnRef.current = false;
         setTranscriptOn(false);
         setLiveCaption("");
@@ -630,8 +635,8 @@ const MeetingRoom = () => {
               ) : captionsBlocked ? (
                 <p className="text-[12px] text-white/40 leading-relaxed">
                   Microphone access for captions was blocked. Check your
-                  browser's site settings to allow it, then refresh — your
-                  call audio is unaffected either way.
+                  browser's site settings to allow it, then refresh — your call
+                  audio is unaffected either way.
                 </p>
               ) : transcript.length === 0 ? (
                 <p className="text-[12px] text-white/40 leading-relaxed">

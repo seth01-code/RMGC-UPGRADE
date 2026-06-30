@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const newRequest = axios.create({
-  baseURL: "http://localhost:4000/api",
+  baseURL: "https://api.renewedmindsglobalconsult.com/",
   withCredentials: true,
 });
 
@@ -16,7 +16,7 @@ newRequest.interceptors.response.use(
       }
     }
     return Promise.reject(err);
-  }
+  },
 );
 
 export default newRequest;

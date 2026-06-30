@@ -64,7 +64,8 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
       setConversations(data);
     } catch (err: any) {
       if (err.response) setError(`Server Error: ${err.response.status}`);
-      else if (err.request) setError("No response from server. Check your connection.");
+      else if (err.request)
+        setError("No response from server. Check your connection.");
       else setError("Failed to fetch conversations.");
     } finally {
       setLoading(false);
@@ -72,37 +73,107 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   };
 
   useEffect(() => {
-    socket.current = io("http://localhost:4000/api");
+    socket.current = io("https://api.renewedmindsglobalconsult.com/");
     fetchConversations();
     socket.current.on("messageSeen", (seenMessage: any) => {
       setConversations((prev) =>
         prev.map((conv) =>
           conv._id === seenMessage.conversationId
             ? { ...conv, lastMessage: seenMessage }
-            : conv
-        )
+            : conv,
+        ),
       );
     });
-    return () => { socket.current?.disconnect(); };
+    return () => {
+      socket.current?.disconnect();
+    };
   }, [userId]);
 
   const getInitials = (name: string) =>
-    name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+    name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
 
   const renderLastMessage = (lastMessage?: LastMessage) => {
-    if (!lastMessage) return <span style={{ color: "#4B5563" }}>No messages yet</span>;
+    if (!lastMessage)
+      return <span style={{ color: "#4B5563" }}>No messages yet</span>;
     const iconStyle = { flexShrink: 0 as const };
     switch (lastMessage.mediaType) {
-      case "image":   return <span style={{ display: "flex", alignItems: "center", gap: "5px", color: "#9CA3AF" }}><FaCamera size={11} color="#FF8C47" style={iconStyle} /> Photo</span>;
-      case "video":   return <span style={{ display: "flex", alignItems: "center", gap: "5px", color: "#9CA3AF" }}><FaVideo size={11} color="#22C55E" style={iconStyle} /> Video</span>;
-      case "audio":   return <span style={{ display: "flex", alignItems: "center", gap: "5px", color: "#9CA3AF" }}><FaMicrophone size={11} color="#A78BFA" style={iconStyle} /> Voice</span>;
-      case "document":return <span style={{ display: "flex", alignItems: "center", gap: "5px", color: "#9CA3AF" }}><FaFile size={11} color="#60A5FA" style={iconStyle} /> Document</span>;
-      default:        return <span style={{ color: "#6B7280", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{lastMessage.text || "No messages yet"}</span>;
+      case "image":
+        return (
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              color: "#9CA3AF",
+            }}
+          >
+            <FaCamera size={11} color="#FF8C47" style={iconStyle} /> Photo
+          </span>
+        );
+      case "video":
+        return (
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              color: "#9CA3AF",
+            }}
+          >
+            <FaVideo size={11} color="#22C55E" style={iconStyle} /> Video
+          </span>
+        );
+      case "audio":
+        return (
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              color: "#9CA3AF",
+            }}
+          >
+            <FaMicrophone size={11} color="#A78BFA" style={iconStyle} /> Voice
+          </span>
+        );
+      case "document":
+        return (
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              color: "#9CA3AF",
+            }}
+          >
+            <FaFile size={11} color="#60A5FA" style={iconStyle} /> Document
+          </span>
+        );
+      default:
+        return (
+          <span
+            style={{
+              color: "#6B7280",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap" as const,
+            }}
+          >
+            {lastMessage.text || "No messages yet"}
+          </span>
+        );
     }
   };
 
   const filtered = conversations.filter((c) =>
-    (c.otherParticipant?.username ?? "").toLowerCase().includes(search.toLowerCase())
+    (c.otherParticipant?.username ?? "")
+      .toLowerCase()
+      .includes(search.toLowerCase()),
   );
 
   return (
@@ -127,7 +198,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
           flexShrink: 0,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: "14px",
+          }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <div
               style={{
@@ -143,7 +221,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             >
               <FaCommentDots color="#fff" size={14} />
             </div>
-            <h2 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#FFFFFF", letterSpacing: "0.01em" }}>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: "16px",
+                fontWeight: 700,
+                color: "#FFFFFF",
+                letterSpacing: "0.01em",
+              }}
+            >
               Messages
             </h2>
           </div>
@@ -164,10 +250,19 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 borderRadius: "8px",
                 transition: "all 0.2s",
               }}
-              onMouseEnter={(e) => { const b = e.currentTarget; b.style.color = "#FF6B1A"; b.style.background = "#FF6B1A12"; }}
-              onMouseLeave={(e) => { const b = e.currentTarget; b.style.color = "#6B7280"; b.style.background = "none"; }}
+              onMouseEnter={(e) => {
+                const b = e.currentTarget;
+                b.style.color = "#FF6B1A";
+                b.style.background = "#FF6B1A12";
+              }}
+              onMouseLeave={(e) => {
+                const b = e.currentTarget;
+                b.style.color = "#6B7280";
+                b.style.background = "none";
+              }}
             >
-              <FaArrowLeft size={11} /> <span className="sidebar-back-label">Back</span>
+              <FaArrowLeft size={11} />{" "}
+              <span className="sidebar-back-label">Back</span>
             </button>
             {/* Close button: always usable, but most useful as the drawer-close on mobile */}
             <button
@@ -184,8 +279,12 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 transition: "color 0.2s",
               }}
               className="sidebar-close-btn"
-              onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = "#FF6B1A")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = "#6B7280")}
+              onMouseEnter={(e) =>
+                ((e.currentTarget as HTMLButtonElement).style.color = "#FF6B1A")
+              }
+              onMouseLeave={(e) =>
+                ((e.currentTarget as HTMLButtonElement).style.color = "#6B7280")
+              }
             >
               <FaTimes size={14} />
             </button>
@@ -244,15 +343,51 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 background: "#181818",
               }}
             >
-              <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: "#242424", flexShrink: 0, animation: "pulse 1.5s ease-in-out infinite" }} />
+              <div
+                style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "50%",
+                  background: "#242424",
+                  flexShrink: 0,
+                  animation: "pulse 1.5s ease-in-out infinite",
+                }}
+              />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ height: "13px", borderRadius: "6px", background: "#242424", width: "60%", marginBottom: "6px", animation: "pulse 1.5s ease-in-out infinite" }} />
-                <div style={{ height: "11px", borderRadius: "6px", background: "#1E1E1E", width: "80%", animation: "pulse 1.5s ease-in-out infinite" }} />
+                <div
+                  style={{
+                    height: "13px",
+                    borderRadius: "6px",
+                    background: "#242424",
+                    width: "60%",
+                    marginBottom: "6px",
+                    animation: "pulse 1.5s ease-in-out infinite",
+                  }}
+                />
+                <div
+                  style={{
+                    height: "11px",
+                    borderRadius: "6px",
+                    background: "#1E1E1E",
+                    width: "80%",
+                    animation: "pulse 1.5s ease-in-out infinite",
+                  }}
+                />
               </div>
             </div>
           ))
         ) : error ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", padding: "32px 16px", color: "#6B7280", textAlign: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "12px",
+              padding: "32px 16px",
+              color: "#6B7280",
+              textAlign: "center",
+            }}
+          >
             <p style={{ margin: 0, fontSize: "13px" }}>{error}</p>
             <button
               onClick={fetchConversations}
@@ -270,20 +405,40 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 fontWeight: 600,
                 transition: "background 0.2s",
               }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#E85D0A")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.background = "#FF6B1A")}
+              onMouseEnter={(e) =>
+                ((e.currentTarget as HTMLButtonElement).style.background =
+                  "#E85D0A")
+              }
+              onMouseLeave={(e) =>
+                ((e.currentTarget as HTMLButtonElement).style.background =
+                  "#FF6B1A")
+              }
             >
               <FaRedo size={11} /> Retry
             </button>
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", padding: "40px 16px", color: "#4B5563" }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "8px",
+              padding: "40px 16px",
+              color: "#4B5563",
+            }}
+          >
             <FaCommentDots size={28} />
-            <p style={{ margin: 0, fontSize: "13px" }}>{search ? "No results found" : "No conversations yet"}</p>
+            <p style={{ margin: 0, fontSize: "13px" }}>
+              {search ? "No results found" : "No conversations yet"}
+            </p>
           </div>
         ) : (
           filtered.map((conv) => {
-            const other = conv.otherParticipant ?? { _id: "", username: "Unknown" };
+            const other = conv.otherParticipant ?? {
+              _id: "",
+              username: "Unknown",
+            };
             const isSelected = conv._id === selectedId;
             return (
               <div
@@ -297,27 +452,46 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                   marginBottom: "2px",
                   borderRadius: "12px",
                   background: isSelected ? "#FF6B1A18" : "transparent",
-                  border: isSelected ? "1px solid #FF6B1A30" : "1px solid transparent",
+                  border: isSelected
+                    ? "1px solid #FF6B1A30"
+                    : "1px solid transparent",
                   cursor: "pointer",
                   transition: "all 0.15s ease",
                 }}
                 onMouseEnter={(e) => {
-                  if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = "#1A1A1A";
+                  if (!isSelected)
+                    (e.currentTarget as HTMLDivElement).style.background =
+                      "#1A1A1A";
                 }}
                 onMouseLeave={(e) => {
-                  if (!isSelected) (e.currentTarget as HTMLDivElement).style.background = "transparent";
+                  if (!isSelected)
+                    (e.currentTarget as HTMLDivElement).style.background =
+                      "transparent";
                 }}
               >
                 {/* Avatar */}
                 <div style={{ position: "relative", flexShrink: 0 }}>
                   {other.img ? (
-                    <div style={{ width: "44px", height: "44px", borderRadius: "50%", overflow: "hidden", border: `2px solid ${isSelected ? "#FF6B1A" : "#2A2A2A"}`, transition: "border-color 0.15s" }}>
+                    <div
+                      style={{
+                        width: "44px",
+                        height: "44px",
+                        borderRadius: "50%",
+                        overflow: "hidden",
+                        border: `2px solid ${isSelected ? "#FF6B1A" : "#2A2A2A"}`,
+                        transition: "border-color 0.15s",
+                      }}
+                    >
                       <Image
                         src={other.img}
                         alt={other.username}
                         width={44}
                         height={44}
-                        style={{ objectFit: "cover", width: "100%", height: "100%" }}
+                        style={{
+                          objectFit: "cover",
+                          width: "100%",
+                          height: "100%",
+                        }}
                       />
                     </div>
                   ) : (
@@ -361,7 +535,15 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
                   >
                     {other.username}
                   </p>
-                  <div style={{ fontSize: "12px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: "2px" }}>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      marginTop: "2px",
+                    }}
+                  >
                     {renderLastMessage(conv.lastMessage)}
                   </div>
                 </div>

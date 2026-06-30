@@ -12,7 +12,7 @@ import { io, Socket } from "socket.io-client";
 import { useCallManager } from "./chatWindow/useCallManager";
 import CallModal, { CallType } from "./chatWindow/CallModal";
 
-const SOCKET_URL = "http://localhost:4000";
+const SOCKET_URL = "https://api.renewedmindsglobalconsult.com";
 
 interface CurrentUser {
   id: string;
@@ -29,7 +29,7 @@ interface CallContextValue {
     remoteUserId: string,
     remoteUsername: string,
     type: CallType,
-    remoteAvatar?: string
+    remoteAvatar?: string,
   ) => void;
   endCall: () => void;
 }
@@ -125,7 +125,7 @@ export default function CallProvider({ children }: { children: ReactNode }) {
 
   const { callState, initiateCall, acceptCall, endCall } = useCallManager(
     socket,
-    currentUser?.id || ""
+    currentUser?.id || "",
   );
 
   return (
