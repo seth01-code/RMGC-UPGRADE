@@ -12,7 +12,7 @@ import { io, Socket } from "socket.io-client";
 import { useCallManager } from "./chatWindow/useCallManager";
 import CallModal, { CallType } from "./chatWindow/CallModal";
 
-const SOCKET_URL = "https://api.renewedmindsglobalconsult.com";
+const SOCKET_URL = "https://api.renewedmindsglobalconsult.com/api";
 
 interface CurrentUser {
   id: string;

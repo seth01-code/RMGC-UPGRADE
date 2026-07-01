@@ -73,7 +73,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   };
 
   useEffect(() => {
-    socket.current = io("https://api.renewedmindsglobalconsult.com/");
+    socket.current = io("https://api.renewedmindsglobalconsult.com/api");
     fetchConversations();
     socket.current.on("messageSeen", (seenMessage: any) => {
       setConversations((prev) =>
