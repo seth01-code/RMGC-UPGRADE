@@ -18,7 +18,7 @@ import {
   HiMenuAlt2,
   HiX,
 } from "react-icons/hi";
-import { FaTasks } from "react-icons/fa";
+import { FaChartBar, FaTasks, FaUsers } from "react-icons/fa";
 import { LuLayoutDashboard } from "react-icons/lu";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -434,9 +434,25 @@ const SellerNavbar: React.FC = () => {
               <NavItem
                 href="/admin/sellers"
                 icon={<FaTasks />}
-                label="Sellers"
+                label="Freelancers"
                 collapsed={effectiveCollapsed}
                 active={pathname.startsWith("/admin/sellers")}
+                onNavigate={closeMobile}
+              />
+              <NavItem
+                href="/admin/users"
+                icon={<FaUsers />}
+                label="Users"
+                collapsed={effectiveCollapsed}
+                active={pathname.startsWith("/admin/users")}
+                onNavigate={closeMobile}
+              />
+              <NavItem
+                href="/admin/analytics"
+                icon={<FaChartBar />}
+                label="Analytics"
+                collapsed={effectiveCollapsed}
+                active={pathname.startsWith("/admin/analytics")}
                 onNavigate={closeMobile}
               />
             </>
